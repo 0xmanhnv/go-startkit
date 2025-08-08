@@ -237,6 +237,35 @@ Errors
   - Panic → JSONRecovery → 500 with { error: { code: "server_error" }, meta: { request_id } }
 ```
 
+### Protected route flow (/v1/auth/me with JWTAuth)
+```txt
+Client
+  │
+  ├─► Gin Router
+  │     │
+  │     ├─► JSONRecovery → RequestID → Logger → SecurityHeaders? → CORS
+  │     └─► Route match: GET /v1/auth/me (protected group)
+  │            └─► JWTAuth middleware
+  │                  ├─ Check Authorization header present
+  │                  ├─ Extract Bearer token
+  │                  ├─ Validate via TokenValidator → JWTService.ValidateToken
+  │                  │     ├─ Verify signature (HS256), iat, exp, nbf(+leeway)
+  │                  │     ├─ Optional issuer/audience checks
+  │                  │     └─ Return claims { sub=user_id, role }
+  │                  ├─ Set context: user_id, user_role
+  │                  └─ On error → 401 with WWW-Authenticate and envelope { error: { code: "unauthorized"|"invalid_token" } }
+  │
+  └─► Handler: UserHandler.GetMe
+        └─► UserUsecases.GetMe(user_id)
+              └─► UserRepository.GetByID (Postgres)
+                   └─ Not found → domain ErrUserNotFound
+
+Responses
+  - 200: { data: UserResponse }
+  - 401: { error: { code: "unauthorized", message: "missing or invalid token" } }
+  - 404: { error: { code: "not_found", message: "user not found" } }
+```
+
 ### Composition root wiring (cmd/api)
 ```txt
 config.Load
