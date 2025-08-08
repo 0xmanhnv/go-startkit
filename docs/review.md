@@ -1,3 +1,24 @@
+## AppSecHub — Pending (High Priority)
+
+- Observability
+  - Expose `/metrics` (Prometheus)
+  - Add pprof (dev-only)
+  - Consider OpenTelemetry tracing for HTTP and DB
+
+- Testing & CI
+  - GitHub Actions: build, test, lint, govulncheck
+  - Container image scanning (e.g., Trivy)
+  - Tests:
+    - Unit: domain/usecases (mock repo/hasher/jwt)
+    - HTTP handlers (table-driven tests)
+    - Integration: repositories with Postgres (testcontainers/compose)
+  - Set reasonable coverage thresholds
+
+- Secrets Management (Production)
+  - Manage `JWT_SECRET`, `DB_PASSWORD` via a secret manager (AWS/GCP/Vault)
+  - Rotate secrets periodically; inject at runtime (ENV/volumes)
+  - Keep `/swagger` disabled in prod (already enforced by ENV)
+
 ## AppSecHub — Codebase Review (Initial)
 
 ### Trạng thái hiện tại (cập nhật)
