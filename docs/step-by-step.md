@@ -18,10 +18,10 @@ dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", .
 sqlDB, err := postgres.NewPostgresConnection(dsn)
 if err != nil { log.Fatal(err) }
 userRepo := postgres.NewUserRepository(sqlDB)
-hasher := security.NewBcryptHasher()
+hasher := security.NewBcryptHasher(cfg.Security.BcryptCost)
 createUC := &userusecase.CreateUserUseCase{repo: userRepo, hasher: hasher}
 userHandler := handler.NewUserHandler(createUC)
-router := httpiface.NewRouter(userHandler)
+router := httpiface.NewRouter(userHandler, cfg)
 ```
 
 - ### Stage 2 – Login use case + route

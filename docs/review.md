@@ -13,6 +13,21 @@
   - Docker compose dev/prod; distroless runtime; hot-reload bằng Air
   - Router chuẩn hóa: helper nhỏ `applyBaseMiddlewares`, `registerHealthRoutes`, `registerAPIV1Routes`, `registerAuthLogin` (rate limit theo config)
 
+#### Cập nhật mới (đã triển khai)
+- CORS: loại bỏ CORS mặc định ở `applyBaseMiddlewares`; chỉ còn áp dụng qua `applyCORSFromConfig` (env `HTTP_CORS_ALLOWED_ORIGINS`).
+- Gom nhóm route `auth` vào một hàm: `registerAuthRoutes` (đã bao gồm `/register`, `/login` và các route bảo vệ `/me`, `/change-password`); bỏ `registerAuthLogin`.
+- Thông báo lỗi JSON thân thiện: body rỗng → `"request body is empty"`; JSON sai cú pháp → `"malformed JSON at position N"`; sai kiểu → `"invalid type for field <field>"`.
+- JWT: đặt `NotBefore=now` khi phát token; khi validate nếu `now + leeway < nbf` thì trả lỗi `token not yet valid` (giảm ảnh hưởng clock skew).
+ - Router API: hợp nhất còn một hàm `NewRouter(userHandler, cfg, authMiddleware...)`; loại bỏ biến thể không có `cfg`.
+ - Graceful shutdown: dùng `http.Server` (`ReadHeaderTimeout=5s`, `IdleTimeout=60s`) + `Shutdown(15s)` khi nhận `SIGINT/SIGTERM`; đóng `sqlDB` sau khi dừng.
+- Logger: thêm global default logger (`logger.Init` một lần ở entrypoint, dùng `logger.L()` ở mọi nơi; có `SetLevel` đổi mức log runtime). Đã thay toàn bộ `log.Printf`/`slog.Warn` còn sót bằng `logger.L().*`. Không tạo logger mới trong router; dùng `logger.L()`.
+ - HTTP error mapping: chuẩn hóa mã lỗi/HTTP status cho `Register`, `Login`, `GetMe`, `ChangePassword` (400/401/404/409/500) qua `response` helpers.
+- IoC cho Auth: middleware `JWTAuth` nhận `TokenValidator func` thay vì phụ thuộc trực tiếp vào infra JWT; validator được bọc/tiêm ở composition root.
+- Đổi Application “service” → “ports”: `TokenIssuer`, `EmailSender`, `SMSSender`, `ObjectStorage`. Cập nhật import & build OK.
+- Bcrypt cost theo env: `BCRYPT_COST` (4–31), mặc định dùng `bcrypt.DefaultCost` nếu không set/không hợp lệ.
+ - Config singleton: `config.Load()` parse 1 lần (sync.Once); inject `*config.Config` từ composition root, không gọi `Load()` trong leaf code. Đã chỉnh `buildUserComponents` để nhận `cfg` và truyền `cfg.Security.BcryptCost` vào `NewBcryptHasher`.
+- Security headers: thêm CSP mặc định `default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`; HSTS chỉ bật khi HTTPS (TLS hoặc `X-Forwarded-Proto=https`).
+
 - Còn lại/Khuyến nghị tiếp:
   - ~~Nạp RBAC từ YAML ngay trong `main` khi có `RBAC_POLICY_PATH`~~ (đã nạp)
   - ~~Bảo vệ nhóm `/v1/admin`: chain `JWTAuth(jwtSvc)` trước `RequirePermissions(...)`~~ (đã thêm)
@@ -41,22 +56,11 @@
 - **Config**: `internal/config/config.go` + `internal/config/loader.go` (nạp env bằng `caarlos0/env`).
 
 ### Trạng thái build hiện tại
-- Build đang lỗi. Lỗi đầu tiên khi chạy `go build ./...`:
-  - package `appsechub/internal/domain` không tồn tại (import sai trong `internal/application/service/auth_service.go`).
-- Nhiều lỗi wiring/thiếu implement khác sẽ xuất hiện tiếp theo (liệt kê bên dưới).
+- Build: OK trên Go 1.24.
 
 ### Vấn đề chính cần khắc phục
-1) **Cấu hình/Entrypoint không khớp**
-   - `cmd/api/main.go` dùng các field không tồn tại trong `Config`:
-     - `cfg.Port`, `cfg.DB.DSN`, `cfg.DB.MigrationsPath` không có trong `internal/config/config.go`.
-     - `Config` hiện có `HTTP.Port`, `DB.{Host,Port,User,Password,Name,SSLMode}` và `JWT.{Secret,ExpireSec}`.
-   - Hành động: build `DSN` từ `DBConfig`, thêm `MigrationsPath` (vd `./migrations`) hoặc hardcode mặc định, và dùng `cfg.HTTP.Port` khi `router.Run`.
-
-2) **DI/Wire sai import và type** (`cmd/api/wire.go`)
-   - Import sai: `internal/application/usecases/userusecase` (thực tế là `usecase` không có "s").
-   - Import package không tồn tại: `internal/infras/storage/postgres`.
-   - Trả về kiểu không tồn tại: `*handler.Handler`. Trong code chỉ có `*handler.UserHandler`.
-   - Thiếu providers: `NewPostgresConnection`, `NewUserRepository`, `NewUserUsecase` chưa được định nghĩa.
+1) (đã xử lý ở code hiện tại) — mục này được loại bỏ khỏi danh sách.
+2) (đã xử lý ở code hiện tại) — mục này được loại bỏ khỏi danh sách.
 
 3) **UseCase/DTO chưa đồng bộ**
    - `internal/application/usecase/userusecase/create_user.go`:
@@ -77,12 +81,9 @@
    - Thư mục `migrations/` chỉ có `.gitkeep`. `m.Up()` sẽ lỗi nếu không có file hợp lệ hoặc đường dẫn sai.
    - `main` đang truyền `cfg.DB.MigrationsPath` (không có). Cần thêm vào `Config` hoặc mặc định `./migrations`.
 
-7) **Router/DI không khớp**
-   - `internal/interfaces/http/route.go` cần `*handler.UserHandler` trong `NewRouter`, nhưng `InitHandler` hiện trả `*handler.Handler` (không tồn tại).
+7) (đã xử lý) — đã hợp nhất constructor router và wiring đúng `*handler.UserHandler`.
 
-8) **Dockerfile chưa thực tế** (`build/Dockerfile`)
-   - Dùng `golang:1.24.5-alpine` (phiên bản chưa tồn tại thời điểm hiện tại). Nên dùng `1.22` hoặc phiên bản Go mục tiêu thực tế.
-   - `HEALTHCHECK` gọi `"/app/appsechub" "health"` nhưng binary không có lệnh này.
+8) Dockerfile: đang dùng `golang:1.24-alpine` ổn định; healthcheck HTTP có thể cân nhắc thêm sau.
 
 ### Đề xuất lộ trình sửa (ưu tiên)
 1) **Sửa cấu hình và entrypoint**
@@ -133,7 +134,7 @@
 ### Đề xuất cải thiện Clean Architecture / DDD
 - Inversion of Control (tách hạ tầng khỏi application):
   - Tránh `usecase` import trực tiếp `internal/infras/*`.
-  - Tạo interface `TokenService` trong `internal/application/service` (ví dụ: `GenerateToken(userID, role string) (string, error)`), để `LoginUseCase` chỉ phụ thuộc interface. Hạ tầng (`security.JWTService`) implement và inject ở `main`.
+  - Tạo ports trong `internal/application/ports` (ví dụ: `TokenIssuer`, `EmailSender`, `SMSSender`, `ObjectStorage`), để usecase chỉ phụ thuộc interface. Hạ tầng implement và inject ở `main`.
   - JWT hardening: thêm kiểm tra `iss/aud/nbf/exp` (có leeway) trong `ValidateToken` qua cấu hình.
 
 - DTO và biên giới layer:
@@ -182,4 +183,96 @@
 5) Viết test cơ bản cho `CreateUserUseCase` và `LoginUseCase` (mock repo/hasher/jwt) và 1–2 test handler; thêm CI đơn giản.
 
 Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một cụm lỗi lớn để tiện theo dõi tiến độ.
+
+
+## Fix Checklist (Actionable)
+
+~~1) CORS – một nguồn cấu hình duy nhất (tránh double-middleware)~~ (ĐÃ THỰC HIỆN)
+- File: `internal/interfaces/http/route.go`
+  - Trong `applyBaseMiddlewares`, gỡ khối `r.Use(cors.New(...))` mặc định `AllowOrigins: "*"`.
+  - Giữ nguyên `applyCORSFromConfig(r, cfg)` và cấu hình qua env `HTTP_CORS_ALLOWED_ORIGINS`.
+- Env (dev): `HTTP_CORS_ALLOWED_ORIGINS=*`
+- Env (prod): whitelist origin (vd: `HTTP_CORS_ALLOWED_ORIGINS=https://app.example.com`)
+  
+
+2) Security headers/HSTS – chỉ bật khi có TLS
+- File: `internal/interfaces/http/middleware/security_headers.go`
+  - Tùy chọn A (nhanh): đặt `HTTP_SECURITY_HEADERS=false` cho dev (compose dev); bật true ở prod.
+  - Tùy chọn B (chuẩn): chỉ set HSTS khi nhận diện HTTPS (vd kiểm `X-Forwarded-Proto=https`) hoặc `cfg.Env=="prod"`.
+- Env gợi ý (dev): `HTTP_SECURITY_HEADERS=false`
+
+~~3) Graceful shutdown + HTTP timeouts~~ (ĐÃ THỰC HIỆN)
+- File: `cmd/api/main.go`
+  - Dùng `http.Server` với timeouts; xử lý `SIGINT/SIGTERM` và `Shutdown(15s)`; đóng DB.
+
+~~4) Go toolchain đồng bộ~~ (ĐÃ THỰC HIỆN với Go 1.24)
+- File: `go.mod`: `go 1.24`
+- File: `build/Dockerfile`: base `golang:1.24-alpine`
+- File: `Readme.md`: yêu cầu Go 1.24+
+
+~~5) JWT `NotBefore` (nbf) logic rõ ràng~~ (ĐÃ THỰC HIỆN)
+- File: `internal/infras/security/jwt_service.go`
+  - `GenerateToken`: set `NotBefore=now`.
+  - `ValidateToken`: nếu `now + leeway < nbf` → `token not yet valid`.
+  - Không dùng `jwt.WithNotBefore()` (không có trong v5); kiểm tra thủ công với `claims.NotBefore`.
+
+6) Rate limiting – ghi chú giới hạn
+- File: `internal/interfaces/http/middleware/ratelimit.go`
+  - Hiện tại in-memory per-process (ổn cho dev/single instance). Với multi-instance, cân nhắc Redis-based limiter (triển khai sau khi scale).
+  - ĐÃ THÊM cảnh báo runtime ở prod khi bật login rate limit: log nhắc dùng distributed limiter (Redis) cho multi-instance.
+
+~~14) Hợp nhất constructor Router~~ (ĐÃ THỰC HIỆN)
+- File: `internal/interfaces/http/route.go`
+  - Còn duy nhất `NewRouter(userHandler, cfg, authMiddleware...)`; bỏ `NewRouterWithConfig` và biến thể không có `cfg`.
+
+~~15) Logger global default & runtime level~~ (ĐÃ THỰC HIỆN)
+- File: `pkg/logger/logger.go`, `cmd/api/main.go`
+  - Thêm `logger.Init` (gọi 1 lần ở entrypoint) và `logger.L()` dùng ở mọi nơi; `SetLevel` đổi mức log runtime.
+
+~~7) Mapping lỗi HTTP~~ (ĐÃ THỰC HIỆN)
+- File: `internal/interfaces/http/response/response.go`
+  - Thêm helpers: `NotFound`, `Conflict`.
+- File: `internal/interfaces/http/handler/user_handler.go`
+  - `Register`: `ErrEmailAlreadyExists` → 409 Conflict.
+  - `Login`: invalid credentials → 401 Unauthorized.
+  - `GetMe`: `ErrUserNotFound` → 404 Not Found.
+  - `ChangePassword`: `ErrUserNotFound` → 404 Not Found; `ErrInvalidPassword` → 400 Bad Request.
+  - JSON bind errors: thông điệp thân thiện (đã thực hiện trước).
+
+8) Observability
+- Thêm endpoint `/metrics` (Prometheus) qua middleware/handler riêng (dev/prod đều dùng).
+- Cân nhắc OpenTelemetry tracing cho HTTP và DB (gin middleware + pgx/driver hook nếu cần), dev bật sampling cao; prod tùy chỉnh.
+
+9) Testing & CI
+- Thêm `golangci-lint` config; GH Actions: build/test/lint/govulncheck; image scan (trivy) tùy nhu cầu.
+- Viết tests:
+  - Unit: domain/usecases (mock repo/hasher/jwt).
+  - HTTP handlers: Gin + `httptest` (table-driven).
+  - Integration: repo Postgres bằng testcontainers-go hoặc compose.
+- Makefile targets: `build`, `run`, `test`, `lint`, `migrate-up`, `migrate-down`.
+
+10) API Docs (dev-only)
+- Tích hợp Swagger/OpenAPI (`swaggo` hoặc `kin-openapi`), expose `/swagger` chỉ ở `ENV=dev`.
+
+11) Env templates
+- Bổ sung/điều chỉnh `.env.example` (nếu thiếu):
+  - `ENV=dev`
+  - `HTTP_PORT=8080`
+  - `HTTP_CORS_ALLOWED_ORIGINS=*`
+  - `HTTP_SECURITY_HEADERS=false`
+  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=appsechub` `DB_PASSWORD=devpassword` `DB_NAME=appsechub` `DB_SSLMODE=disable`
+  - `MIGRATIONS_PATH=migrations`
+  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=appsechub` `JWT_AUDIENCE=appsechub-clients` `JWT_LEEWAY_SEC=30`
+  - `SEED_ENABLE=true` và bộ `SEED_*` cho admin dev
+
+12) Compose dev/prod
+- `docker-compose.dev.yml`: đã ok cho bind mount + Air; đảm bảo `HTTP_SECURITY_HEADERS=false` để tránh HSTS local.
+- `docker-compose.yml`: đặt `ENV=prod`, set secrets qua env an toàn (đừng commit).
+
+~~13) Gom nhóm route `auth` vào một hàm~~ (ĐÃ THỰC HIỆN)
+- File: `internal/interfaces/http/route.go`
+  - Thêm `registerAuthRoutes` gộp `/register`, `/login` (kèm rate limit khi có `cfg`), và các route bảo vệ `/me`, `/change-password`.
+  - Cập nhật `registerAPIV1Routes` gọi `registerAuthRoutes`; bỏ hàm riêng `registerAuthLogin`.
+
+Thứ tự khuyến nghị thực hiện: (1) CORS, (2) Security headers/HSTS, (3) Graceful shutdown, (4) Go toolchain, (5) JWT nbf, (7) Mapping lỗi, (11) Env template; sau đó nâng cấp Observability/Tests/CI.
 

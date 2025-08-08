@@ -7,13 +7,17 @@ AppSecHub is a Go starter kit for building HTTP services, following a clear laye
 ```txt
 HTTP Request (Gin)
     ↓
+Base middlewares: Recovery → RequestID → (Logger+SecurityHeaders if enabled) → CORS
+    ↓
+Route match (Gin) + optional RateLimit for /v1/auth/login
+    ↓
 Handler (UserHandler)
     ↓
 DTO → UseCase
     ↓
 UseCase (UserUsecase)
     ↓
-Call Repository Interface (UserRepository)
+Call Repository Interface (UserRepository) + Ports (e.g., TokenIssuer)
     ↓
 Repository implementation (Postgres)
     ↓
@@ -25,7 +29,7 @@ Handler returns HTTP Response
 ```
 
 ## System requirements
-- Go 1.22+
+- Go 1.24+
 - Docker 24+ and Docker Compose v2
 
 ## Environment configuration
@@ -47,6 +51,9 @@ Handler returns HTTP Response
    - `HTTP_SECURITY_HEADERS=true` (enable common security headers; use behind TLS)
    - `HTTP_LOGIN_RATELIMIT_RPS=1`
    - `HTTP_LOGIN_RATELIMIT_BURST=5`
+    - For multi-instance/prod, use distributed limiter (e.g., Redis) instead of in-memory.
+  - Optional password hashing:
+    - `BCRYPT_COST=12` (4–31). Higher = slower = stronger. Tune per env (dev lower for speed, prod higher ~100–250ms/hash target).
 
 ## Development (hot reload)
 1) Docker + Air (recommended):
@@ -57,6 +64,14 @@ Handler returns HTTP Response
    - Run: `air -c ./.air.toml`
 
 Default API base URL: `http://localhost:8080`
+
+### Distributed rate limit (production)
+- Current limiter is in-memory per instance (OK for dev/single instance).
+- For prod with >1 replicas, use Redis-based limiter (configure `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB`). Compose includes `redis` service in dev/prod profiles.
+
+### Refresh tokens (JWT hardening)
+- Access token short TTL; issue refresh tokens with rotation and revocation list (e.g., stored in Redis with TTL).
+- Skeleton implemented: application port `RefreshTokenStore`, Redis-backed implementation `internal/infras/auth/redis_refresh_store.go`. Wire and endpoints for refresh/revoke can be added as needed.
 
 ## Production (reference)
 - Build & run: `docker compose up -d --build`
@@ -88,13 +103,69 @@ Default API base URL: `http://localhost:8080`
 | Layer | Directory | Allowed to import | Must NOT import | Notes/Examples |
 |------|-----------|-------------------|------------------|----------------|
 | Domain (Core) | `internal/domain/...` | Standard library only (and very small third-party if truly pure) | `application`, `interfaces`, `infras`, `config` | Contains Entities, ValueObjects, Domain Errors, Repository Interfaces. |
-| Application (UseCases) | `internal/application/...` | `internal/domain/...`, application-local interfaces (e.g. `application/service`) | `interfaces/http/...`, `infras/...` | Orchestrates domain logic; depends inward on domain; define `TokenService` etc. as interfaces. |
+| Application (UseCases) | `internal/application/...` | `internal/domain/...`, application-local interfaces (e.g. `application/ports`) | `interfaces/http/...`, `infras/...` | Orchestrates domain logic; depends inward on domain; define ports (e.g., `TokenIssuer`) as interfaces. |
 | Interfaces (HTTP) | `internal/interfaces/http/...` | `internal/application/...`, interface-local helpers (e.g. `response`), third-party frameworks (Gin) | `infras/...` | Accept dependencies via wiring; do not call infra directly. Map domain/application errors → HTTP. |
-| Infrastructure | `internal/infras/...` | `internal/domain/...`, application service interfaces (e.g. implement `TokenService`) | `interfaces/http/...`, application DTOs/usecases | Implements repositories (Postgres), security (JWT/Bcrypt), migrator. No knowledge of HTTP. |
+| Infrastructure | `internal/infras/...` | `internal/domain/...`, application ports (e.g. implement `TokenIssuer`) | `interfaces/http/...`, application DTOs/usecases | Implements repositories (Postgres), security (JWT/Bcrypt), migrator. No knowledge of HTTP. |
 | Config | `internal/config/...` | Standard library + config libs | n/a | Read env/config; imported by `main` and infra where needed. |
 | Composition Root | `cmd/api` | All layers | n/a | Wire everything: build DSN, create repos/services/usecases/handlers, create router. |
 
 Dependency flow must be inward only: `interfaces → application → domain`; `infras → domain` (and application service interfaces). `cmd/api` is the only place that sees and wires across all layers.
+
+### Runtime call flow (authn protected route)
+```txt
+Client
+  → Gin router
+    → Middlewares: Recovery → RequestID → (Logger/SecurityHeaders) → CORS → (JWTAuth on protected group)
+      → Handler (UserHandler)
+        → UseCase (UserUsecases)
+          → Ports (TokenIssuer, EmailSender, SMSSender, ObjectStorage...) & Repositories
+            → Infrastructure implementations (JWT, SMTP, Twilio, Postgres...)
+```
+
+### Composition root wiring (cmd/api)
+```txt
+config.Load
+  → initPostgresAndMigrate (Build DSN → Run migrations → Open *sql.DB)
+  → initJWTService (infra) then build validator func for middleware
+  → (optional) seedInitialUser
+  → loadRBACPolicy (YAML)
+  → buildUserComponents (repo, hasher, usecases, handlers)
+  → NewRouter(userHandler, cfg, JWTAuth(validator)) + AddReadiness
+  → http.Server + graceful shutdown (SIGINT/SIGTERM)
+```
+
+### Import dependency flow (allowed edges)
+```txt
+interfaces/http  → application (usecases, ports)
+application      → domain (entities, VOs) & application/ports
+infrastructure   → domain (and implement application/ports)
+cmd/api          → all (composition root only)
+```
+
+### Naming & conventions (DDD / Clean Architecture)
+- Phân định vai trò theo lớp:
+  - Domain: Entities, Value Objects, Domain Services (chỉ business logic thuần), Domain Errors.
+  - Application: Use Cases (điều phối), Ports (interfaces) cho phụ thuộc ra ngoài (Token, Email, SMS, ObjectStorage...). Không import hạ tầng.
+  - Infrastructure: Adapters/Implementations cho các Ports (JWT, SMTP, Twilio, S3, Postgres...). Không biết HTTP/use case.
+  - Composition Root (`cmd/api`): Wire mọi thứ (khởi tạo infra, inject vào ports/use cases, tạo router).
+
+- Về đặt tên (naming):
+  - Thư mục `internal/application/ports/` chứa các PORTS (interfaces/func adapters) mà Application cần.
+  - Domain Service (nếu có) phải đặt ở `internal/domain/...` và không phụ thuộc application/infra.
+  - Middleware/HTTP helpers ở `internal/interfaces/http/...` chỉ map/biến đổi, không chứa business logic.
+
+- Ví dụ ports trong Application:
+  - `TokenIssuer` (phát token) → implemented bởi `internal/infras/security`.
+  - `EmailSender`, `SMSSender` → implemented bởi `internal/infras/notify/...`.
+  - `ObjectStorage` → implemented bởi `internal/infras/storage/...`.
+  - Inject các ports tại `cmd/api/bootstrap.go` để giữ Inversion of Control chặt chẽ.
+
+#### Ports glossary (giải nghĩa tên gọi đề xuất)
+- Issuer: thành phần “phát hành” (issue) một loại thông tin, ví dụ token (JWT). Ví dụ: `TokenIssuer.Generate(userID, role)`.
+- Validator/Verifier: thành phần xác thực/kiểm chứng một giá trị (ví dụ: `Validate(token)`), thường dùng ở middleware.
+- Sender: thành phần “gửi” một thông điệp (Email/SMS), ví dụ `EmailSender.Send(...)`, `SMSSender.Send(...)`.
+- Storage: thành phần lưu trữ đối tượng/blob (ví dụ `ObjectStorage.Put/Get/Delete`).
+- Provider/Gateway: adapter kết nối tới hệ thống bên ngoài (payment, oauth...), có thể dùng nếu phù hợp ngữ cảnh.
 
 ## Documentation
 - Codebase review & pending fixes: `docs/review.md`
@@ -106,6 +177,11 @@ Dependency flow must be inward only: `interfaces → application → domain`; `i
 ## Security recommendations
 - Password hashing with bcrypt (integrated); increase cost appropriately for production.
 - Manage `JWT_SECRET` with a secret manager; use short TTL; consider refresh tokens/rotation.
-- Enable CORS appropriately, add security headers (HSTS, X-Content-Type-Options, Referrer-Policy...).
+- Enable CORS appropriately, add security headers (HSTS when HTTPS, X-Content-Type-Options, Referrer-Policy, X-Frame-Options).
+- Content Security Policy (CSP): default applied by middleware: `default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`. Adjust per frontend needs.
 - Structured logging with a `request-id`; never log secrets or sensitive data.
+
+### Logging guidance
+- Initialize once at entrypoint with `logger.Init(...)` and use `logger.L()` everywhere else.
+- Do not create new loggers inside router/middlewares; it may desync level/format.
 

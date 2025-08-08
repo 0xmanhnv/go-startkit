@@ -18,10 +18,10 @@
 - `CreateUserUseCase` đã chuẩn hóa input/validation/hash/save/response.
 - ~~Thêm `LoginUseCase`~~:
   - ~~GetByEmail → compare password (bcrypt) → generate JWT → trả `dto.LoginResponse`.~~
-  - ~~Định nghĩa interface `TokenService` (hoặc dùng `security.JWTService` trực tiếp).~~
+  - ~~Định nghĩa interface `TokenIssuer` (hoặc dùng `security.JWTService` trực tiếp).~~
 - Chuẩn hóa interface `UserUsecase` (gom nhóm usecase) hoặc inject từng usecase vào handler.
  - ~~PasswordHasher interface~~ dùng ở usecases; implement bằng bcrypt ở infra.
- - ~~TokenService (application interface)~~ được implement bởi JWT infra.
+ - ~~TokenIssuer (application interface)~~ được implement bởi JWT infra.
  - [ ] Thêm use case tham khảo: `GetMe`, `ChangePassword`, `UpdateProfile`, `ListUsers` (pagination, filtering).
  - [ ] Bao phủ context/timeouts cho usecases (đã có ở repo); không log trong usecases; chỉ trả lỗi domain/application.
  - [ ] Transaction boundary cho các usecase cần atomic (thiết kế `UnitOfWork`/`TxManager` abstraction ở application; implement ở infra).
@@ -43,10 +43,10 @@ dsn := fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=%s", .
 dbConn, err := postgres.NewPostgresConnection(dsn)
 if err != nil { log.Fatal(err) }
 repo := postgres.NewUserRepository(dbConn)
-hasher := security.NewBcryptHasher()
+hasher := security.NewBcryptHasher(cfg.Security.BcryptCost)
 createUC := &userusecase.CreateUserUseCase{repo: repo, hasher: hasher}
 userHandler := handler.NewUserHandler(createUC)
-router := httpiface.NewRouter(userHandler)
+router := httpiface.NewRouter(userHandler, cfg)
 ```
 
 ### 7) Security Baseline
