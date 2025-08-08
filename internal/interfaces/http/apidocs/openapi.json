@@ -205,7 +205,17 @@
         },
         "responses": {
           "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeLoginResponse" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeLogin" } } } } },
-          "401": { "description": "Unauthorized (invalid credentials)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" }, "examples": { "invalid": { "$ref": "#/components/examples/EnvelopeErrorUnauthorized" } } } } }
+          "401": { "description": "Unauthorized (invalid credentials)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" }, "examples": { "invalid": { "$ref": "#/components/examples/EnvelopeErrorUnauthorized" } } } } },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "Retry-After": { "schema": { "type": "string" }, "description": "Seconds to wait before retrying" },
+              "X-RateLimit-Limit": { "schema": { "type": "string" } },
+              "X-RateLimit-Remaining": { "schema": { "type": "string" } },
+              "X-RateLimit-Reset": { "schema": { "type": "string" }, "description": "Epoch seconds when the window resets" }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+          }
         }
       }
     },
