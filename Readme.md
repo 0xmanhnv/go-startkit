@@ -205,6 +205,38 @@ Client
             → Infrastructure implementations (JWT, SMTP, Twilio, Postgres...)
 ```
 
+### Detailed request flow (login, with rate limit & validation)
+```txt
+Client
+  │
+  ├─► Gin Router
+  │     │
+  │     ├─► JSONRecovery (panic → 500 JSON envelope)
+  │     ├─► RequestID (add X-Request-Id)
+  │     ├─► Logger (structured logs)
+  │     ├─► SecurityHeaders (optional; CSP/HSTS/XFO/...)
+  │     └─► CORS (per config)
+  │
+  ├─► Route match: POST /v1/auth/login
+  │     ├─► (Optional) RateLimit (in-memory or Redis, only for /v1/auth/login)
+  │     │     └─► If limited → 429 + headers: Retry-After, X-RateLimit-*
+  │     └─► ValidateJSON[LoginRequest] (MaxBodyBytes, binding/validation errors → 400)
+  │
+  └─► Handler: UserHandler.Login
+        └─► UserUsecases.Login
+              ├─► UserRepository.GetByEmail (Postgres)
+              ├─► PasswordHasher.Compare (bcrypt)
+              ├─► TokenIssuer.GenerateToken (JWT)
+              └─► (Optional) RefreshTokenStore.Issue (Redis, if AUTH_REFRESH_ENABLED)
+                  
+            ←─ Response DTO (access_token, refresh_token?, user)
+        ←─ HTTP 200 { data: ... } (envelope)
+
+Errors
+  - Domain/App errors → mapped via response.FromError → 400/401/404/409/500 with { error: { code, message } }
+  - Panic → JSONRecovery → 500 with { error: { code: "server_error" }, meta: { request_id } }
+```
+
 ### Composition root wiring (cmd/api)
 ```txt
 config.Load
