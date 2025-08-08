@@ -2,6 +2,13 @@
 
 AppSecHub is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
 
+## Architecture diagrams
+- Project layout (directories): see section "Project layout"
+- Layered architecture (imports): see subsection under "Project layout"
+- Runtime call flow (protected route): see section "Runtime call flow (authn protected route)"
+- Detailed request flow (login): see section "Detailed request flow (login, with rate limit & validation)"
+- Protected route flow: see section "Protected route flow (/v1/auth/me with JWTAuth)"
+
 ## Request flow (example: login)
 
 ```txt
