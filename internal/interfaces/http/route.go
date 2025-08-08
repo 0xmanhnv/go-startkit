@@ -4,6 +4,7 @@ import (
 	"net/http"
 	"time"
 
+	"appsechub/internal/application/dto"
 	"appsechub/internal/config"
 	"appsechub/internal/interfaces/http/handler"
 	"appsechub/internal/interfaces/http/middleware"
@@ -28,7 +29,7 @@ func NewRouter(userHandler *handler.UserHandler, cfg *config.Config, authMiddlew
 
 // Helpers
 func applyBaseMiddlewares(r *gin.Engine) {
-	r.Use(gin.Recovery())
+	r.Use(middleware.JSONRecovery())
 	r.Use(middleware.RequestID())
 	if err := r.SetTrustedProxies(nil); err != nil {
 		logger.L().Warn("set_trusted_proxies_error", "error", err)
@@ -51,14 +52,22 @@ func registerAPIV1Routes(r *gin.Engine, userHandler *handler.UserHandler, cfg *c
 func registerAuthRoutes(v1 *gin.RouterGroup, userHandler *handler.UserHandler, cfg *config.Config, authMiddleware ...gin.HandlerFunc) {
 	auth := v1.Group("/auth")
 	// Public routes
-	auth.POST("/register", userHandler.Register)
+	auth.POST(
+		"/register",
+		middleware.ValidateJSON[dto.CreateUserRequest]("req", cfg.HTTP.MaxBodyBytes),
+		userHandler.Register,
+	)
 	if cfg != nil && cfg.HTTP.LoginRateLimitRPS > 0 && cfg.HTTP.LoginRateLimitBurst > 0 {
 		if cfg.Env == "prod" {
 			logger.L().Warn("login_rate_limit_in_memory", "note", "in-memory limiter is per-instance; consider Redis for multi-instance", "env", cfg.Env)
 		}
-		auth.POST("/login", middleware.RateLimitForPath("/v1/auth/login", cfg.HTTP.LoginRateLimitRPS, cfg.HTTP.LoginRateLimitBurst), userHandler.Login)
+		auth.POST("/login",
+			middleware.RateLimitForPath("/v1/auth/login", cfg.HTTP.LoginRateLimitRPS, cfg.HTTP.LoginRateLimitBurst),
+			middleware.ValidateJSON[dto.LoginRequest]("req", cfg.HTTP.MaxBodyBytes),
+			userHandler.Login,
+		)
 	} else {
-		auth.POST("/login", userHandler.Login)
+		auth.POST("/login", middleware.ValidateJSON[dto.LoginRequest]("req", cfg.HTTP.MaxBodyBytes), userHandler.Login)
 	}
 	// Token endpoints (public by design; protected by token semantics)
 	if cfg != nil && cfg.Security.RefreshEnabled {
@@ -70,11 +79,11 @@ func registerAuthRoutes(v1 *gin.RouterGroup, userHandler *handler.UserHandler, c
 		protected := auth.Group("")
 		protected.Use(authMiddleware...)
 		protected.GET("/me", userHandler.GetMe)
-		protected.POST("/change-password", userHandler.ChangePassword)
+		protected.POST("/change-password", middleware.ValidateJSON[dto.ChangePasswordRequest]("req", cfg.HTTP.MaxBodyBytes), userHandler.ChangePassword)
 		return
 	}
 	auth.GET("/me", userHandler.GetMe)
-	auth.POST("/change-password", userHandler.ChangePassword)
+	auth.POST("/change-password", middleware.ValidateJSON[dto.ChangePasswordRequest]("req", cfg.HTTP.MaxBodyBytes), userHandler.ChangePassword)
 }
 
 func registerAdminRoutes(v1 *gin.RouterGroup, authMiddleware ...gin.HandlerFunc) {

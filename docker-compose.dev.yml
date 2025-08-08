@@ -56,6 +56,8 @@ services:
       JWT_SECRET: change-me-in-dev
       JWT_EXPIRE_SEC: 3600
       BCRYPT_COST: 10
+      AUTH_REFRESH_ENABLED: ${AUTH_REFRESH_ENABLED:-true}
+      REFRESH_TTL_SEC: ${REFRESH_TTL_SEC:-604800}
       REDIS_ADDR: redis:6379
       REDIS_PASSWORD: ""
       REDIS_DB: 0

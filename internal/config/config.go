@@ -11,6 +11,8 @@ type HTTPConfig struct {
 	// Rate limit for login endpoint (RPS and burst)
 	LoginRateLimitRPS   float64 `env:"HTTP_LOGIN_RATELIMIT_RPS" default:"1"`
 	LoginRateLimitBurst int     `env:"HTTP_LOGIN_RATELIMIT_BURST" default:"5"`
+	// Max body size for JSON requests (bytes)
+	MaxBodyBytes int64 `env:"HTTP_MAX_BODY_BYTES" default:"1048576"`
 }
 
 type DBConfig struct {

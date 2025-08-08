@@ -1,15 +1,11 @@
 package handler
 
 import (
-	"encoding/json"
-	"errors"
-	"fmt"
-	"io"
-
 	"appsechub/internal/application/dto"
 	"appsechub/internal/application/usecase/userusecase"
 	domuser "appsechub/internal/domain/user"
 	"appsechub/internal/interfaces/http/response"
+	"appsechub/internal/interfaces/http/validation"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,12 +15,7 @@ type UserHandler struct{ uc userusecase.UserUsecases }
 func NewUserHandler(uc userusecase.UserUsecases) *UserHandler { return &UserHandler{uc: uc} }
 
 func (h *UserHandler) Register(c *gin.Context) {
-	var req dto.CreateUserRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		code, msg := mapBindJSONError(err)
-		response.BadRequest(c, code, msg)
-		return
-	}
+	req := c.MustGet("req").(dto.CreateUserRequest)
 
 	res, err := h.uc.Register(c.Request.Context(), req)
 	if err != nil {
@@ -42,12 +33,7 @@ func (h *UserHandler) Register(c *gin.Context) {
 }
 
 func (h *UserHandler) Login(c *gin.Context) {
-	var req dto.LoginRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		code, msg := mapBindJSONError(err)
-		response.BadRequest(c, code, msg)
-		return
-	}
+	req := c.MustGet("req").(dto.LoginRequest)
 	resp, err := h.uc.Login(c.Request.Context(), req)
 	if err != nil {
 		status, code, msg := response.FromError(err)
@@ -74,7 +60,7 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		code, msg := mapBindJSONError(err)
+		code, msg := validation.MapBindJSONError(err)
 		response.BadRequest(c, code, msg)
 		return
 	}
@@ -104,7 +90,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		code, msg := mapBindJSONError(err)
+		code, msg := validation.MapBindJSONError(err)
 		response.BadRequest(c, code, msg)
 		return
 	}
@@ -152,12 +138,7 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		response.Unauthorized(c, "unauthorized", "missing user context")
 		return
 	}
-	var req dto.ChangePasswordRequest
-	if err := c.ShouldBindJSON(&req); err != nil {
-		code, msg := mapBindJSONError(err)
-		response.BadRequest(c, code, msg)
-		return
-	}
+	req := c.MustGet("req").(dto.ChangePasswordRequest)
 	if err := h.uc.ChangePassword(c.Request.Context(), userID, req); err != nil {
 		switch err {
 		case domuser.ErrInvalidPassword:
@@ -170,27 +151,4 @@ func (h *UserHandler) ChangePassword(c *gin.Context) {
 		return
 	}
 	response.OK(c, gin.H{"changed": true})
-}
-
-// mapBindJSONError chuyển lỗi bind JSON của Gin thành thông điệp thân thiện với người dùng.
-func mapBindJSONError(err error) (code, message string) {
-	// Trường hợp body rỗng
-	if errors.Is(err, io.EOF) {
-		return "invalid_request", "request body is empty"
-	}
-	// JSON không hợp lệ (syntax)
-	var syn *json.SyntaxError
-	if errors.As(err, &syn) {
-		return "invalid_request", fmt.Sprintf("malformed JSON at position %d", syn.Offset)
-	}
-	// Sai kiểu dữ liệu cho field cụ thể
-	var typeErr *json.UnmarshalTypeError
-	if errors.As(err, &typeErr) {
-		if typeErr.Field != "" {
-			return "invalid_request", fmt.Sprintf("invalid type for field %s", typeErr.Field)
-		}
-		return "invalid_request", "invalid type in JSON payload"
-	}
-	// Mặc định
-	return "invalid_request", "invalid JSON payload"
 }

@@ -7,7 +7,7 @@ AppSecHub is a Go starter kit for building HTTP services, following a clear laye
 ```txt
 HTTP Request (Gin)
     ↓
-Base middlewares: Recovery → RequestID → (Logger+SecurityHeaders if enabled) → CORS
+Base middlewares: JSONRecovery → RequestID → (Logger+SecurityHeaders if enabled) → CORS
     ↓
 Route match (Gin) + optional RateLimit for /v1/auth/login
     ↓
@@ -52,6 +52,7 @@ Handler returns HTTP Response
    - `HTTP_LOGIN_RATELIMIT_RPS=1`
    - `HTTP_LOGIN_RATELIMIT_BURST=5`
     - For multi-instance/prod, use distributed limiter (e.g., Redis) instead of in-memory.
+    - `HTTP_MAX_BODY_BYTES=1048576` (limit JSON body size; default 1 MiB). Requests exceeding this return 413 with code `payload_too_large`.
   - Optional password hashing:
     - `BCRYPT_COST=12` (4–31). Higher = slower = stronger. Tune per env (dev lower for speed, prod higher ~100–250ms/hash target).
   - Optional DB pool tuning:
@@ -59,7 +60,7 @@ Handler returns HTTP Response
     - `DB_CONN_MAX_LIFETIME_SEC=900`, `DB_CONN_MAX_IDLE_TIME_SEC=300`
   - Optional refresh tokens (feature flag):
     - `AUTH_REFRESH_ENABLED=false` (enable to expose `/v1/auth/refresh` and `/v1/auth/logout`)
-    - `REFRESH_TTL_SEC=604800` (7d default; only used when refresh is enabled)
+    - `REFRESH_TTL_SEC=604800` (7d default; only used when refresh is enabled; controls rotation TTL)
 
 ## Development (hot reload)
 1) Docker + Air (recommended):
@@ -89,6 +90,17 @@ Default API base URL: `http://localhost:8080`
 - For prod with >1 replicas, use Redis-based limiter (configure `REDIS_ADDR`, `REDIS_PASSWORD`, `REDIS_DB`). Compose includes `redis` service in dev/prod profiles.
 
 ### Refresh tokens (JWT hardening)
+When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
+- Endpoints exposed: `POST /v1/auth/refresh`, `POST /v1/auth/logout`.
+- Refresh TTL controlled by `REFRESH_TTL_SEC` (default 604800).
+
+### Validation middleware (pre-handler)
+- Requests are bound and validated via middleware before reaching handlers.
+- Errors are mapped to friendly messages; body size is enforced by `HTTP_MAX_BODY_BYTES`.
+- Handlers read validated DTOs from context key `"req"`.
+
+### Registration policy
+- Public registration (`POST /v1/auth/register`) only permits non-admin roles. Attempts to register as `admin` are rejected with `invalid_request`.
 - Access token short TTL; issue refresh tokens with rotation and revocation list (e.g., stored in Redis with TTL).
 - Skeleton implemented: application port `RefreshTokenStore`, Redis-backed implementation `internal/infras/auth/redis_refresh_store.go`. Wire and endpoints for refresh/revoke can be added as needed.
 
@@ -110,6 +122,13 @@ Default API base URL: `http://localhost:8080`
 - Admin example (requires JWT and RBAC permission): `GET /v1/admin/stats`
   - Send header: `Authorization: Bearer <JWT>`
   - Login may be rate limited (HTTP 429) based on `HTTP_LOGIN_RATELIMIT_*`.
+    - 429 responses include headers: `Retry-After`, `X-RateLimit-Limit`, `X-RateLimit-Remaining`, `X-RateLimit-Reset`.
+    - In distributed mode (Redis), reset aligns to 1s windows.
+
+### Error envelope & Recovery
+- All unhandled panics are converted to JSON envelope:
+  `{ "error": { "code": "server_error", "message": "internal error" }, "meta": { "request_id": "..." } }`.
+- Every response includes `X-Request-Id` for correlation.
 
 ## Project layout
 - `internal/domain` – Entities, ValueObjects, business rules

@@ -22,6 +22,9 @@
 - Security headers: CSP added; HSTS only on HTTPS/X-Forwarded-Proto=https
 - CORS: applied only via config (removed default duplicate CORS)
 - DB connection: defaults for pool; overrides applied from config in bootstrap
+- Refresh token TTL now read from `REFRESH_TTL_SEC` via `RefreshUseCase` (removes hard-coded 7d)
+- Rate limit 429 responses now include `Retry-After`, `X-RateLimit-*` headers (both in-memory and Redis limiter)
+- Recovery: replace gin.Recovery with JSONRecovery to standardize 500 error envelope
 
 ### Fixed
 - Double route registration panic (removed NewRouterWithConfig recursion)

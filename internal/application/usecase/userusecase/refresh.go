@@ -17,21 +17,28 @@ type RefreshUseCase struct {
 	repo  user.Repository
 	jwt   ports.TokenIssuer
 	store ports.RefreshTokenStore
+	// refreshTTLSeconds controls how long newly issued refresh tokens live.
+	// If non-positive, a sensible default will be used.
+	refreshTTLSeconds int
 }
 
 func NewRefreshUseCase(repo user.Repository, jwt ports.TokenIssuer) *RefreshUseCase {
 	return &RefreshUseCase{repo: repo, jwt: jwt}
 }
 
-func NewRefreshUseCaseWithStore(repo user.Repository, jwt ports.TokenIssuer, store ports.RefreshTokenStore) *RefreshUseCase {
-	return &RefreshUseCase{repo: repo, jwt: jwt, store: store}
+func NewRefreshUseCaseWithStore(repo user.Repository, jwt ports.TokenIssuer, store ports.RefreshTokenStore, refreshTTLSeconds int) *RefreshUseCase {
+	return &RefreshUseCase{repo: repo, jwt: jwt, store: store, refreshTTLSeconds: refreshTTLSeconds}
 }
 
 func (uc *RefreshUseCase) Execute(ctx context.Context, refreshToken string) (*dto.LoginResponse, error) {
 	if uc.store == nil {
 		return nil, apperr.ErrRefreshStoreNotConfigured
 	}
-	newRefresh, userID, err := uc.store.Rotate(ctx, refreshToken, 3600*24*7) // 7 days default
+	ttl := uc.refreshTTLSeconds
+	if ttl <= 0 {
+		ttl = 3600 * 24 * 7 // default 7 days
+	}
+	newRefresh, userID, err := uc.store.Rotate(ctx, refreshToken, ttl)
 	if err != nil {
 		return nil, apperr.ErrInvalidRefreshToken
 	}

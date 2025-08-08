@@ -2,6 +2,7 @@ package ratelimit
 
 import (
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/gin-gonic/gin"
@@ -54,6 +55,12 @@ func (r *RedisLimiter) Middleware(targetPath string, rps float64, burst int) gin
 			_ = r.client.Expire(ctx, key, time.Second).Err()
 		}
 		if int(count) > max {
+			// Compute reset at the end of the current 1s window
+			reset := time.Unix(now+1, 0)
+			c.Header("Retry-After", "1")
+			c.Header("X-RateLimit-Limit", strconv.Itoa(max))
+			c.Header("X-RateLimit-Remaining", "0")
+			c.Header("X-RateLimit-Reset", strconv.FormatInt(reset.Unix(), 10))
 			c.AbortWithStatusJSON(429, gin.H{"error": "too_many_requests"})
 			return
 		}

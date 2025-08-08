@@ -43,7 +43,7 @@ func NewUserUsecasesWithStore(repo user.Repository, hasher PasswordHasher, jwt p
 		login:   &LoginUserUseCase{repo: repo, hasher: hasher, jwt: jwt, store: store, refreshTTLSeconds: refreshTTLSeconds},
 		getMe:   NewGetMeUseCase(repo),
 		change:  NewChangePasswordUseCase(repo, hasher),
-		refresh: NewRefreshUseCaseWithStore(repo, jwt, store),
+		refresh: NewRefreshUseCaseWithStore(repo, jwt, store, refreshTTLSeconds),
 	}
 }
 
