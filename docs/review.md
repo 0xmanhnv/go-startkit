@@ -244,7 +244,9 @@ Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một 
 - Cân nhắc OpenTelemetry tracing cho HTTP và DB (gin middleware + pgx/driver hook nếu cần), dev bật sampling cao; prod tùy chỉnh.
 
 9) Testing & CI
-- Thêm `golangci-lint` config; GH Actions: build/test/lint/govulncheck; image scan (trivy) tùy nhu cầu.
+- ~~Thêm `golangci-lint` config~~ (ĐÃ THỰC HIỆN: `.golangci.yml`)
+- ~~Makefile targets~~ (ĐÃ THỰC HIỆN: `build/run/test/fmt/vet/lint/tools`, `dev-up/down`, `prod-up/down`)
+- (CÒN LẠI) GH Actions: build/test/lint/govulncheck; image scan (trivy) tùy nhu cầu.
 - Viết tests:
   - Unit: domain/usecases (mock repo/hasher/jwt).
   - HTTP handlers: Gin + `httptest` (table-driven).
