@@ -2,6 +2,15 @@ package config
 
 type HTTPConfig struct {
     Port string `env:"HTTP_PORT" default:"8080"`
+    // Trusted proxy list (CIDR/IP). Empty slice = trust no proxies
+    TrustedProxies []string `env:"HTTP_TRUSTED_PROXIES"`
+    // CORS allowed origins (comma-separated). Use "*" for all in dev.
+    AllowedOrigins []string `env:"HTTP_CORS_ALLOWED_ORIGINS" default:"*" envSeparator:","`
+    // Security headers toggle
+    SecurityHeaders bool `env:"HTTP_SECURITY_HEADERS" default:"true"`
+    // Rate limit for login endpoint (RPS and burst)
+    LoginRateLimitRPS   float64 `env:"HTTP_LOGIN_RATELIMIT_RPS" default:"1"`
+    LoginRateLimitBurst int     `env:"HTTP_LOGIN_RATELIMIT_BURST" default:"5"`
 }
 
 type DBConfig struct {
@@ -16,6 +25,23 @@ type DBConfig struct {
 type JWTConfig struct {
     Secret    string `env:"JWT_SECRET"`
     ExpireSec int    `env:"JWT_EXPIRE_SEC" default:"3600"`
+    Issuer    string `env:"JWT_ISSUER" default:"appsechub"`
+    Audience  string `env:"JWT_AUDIENCE" default:"appsechub-clients"`
+    LeewaySec int    `env:"JWT_LEEWAY_SEC" default:"30"`
+}
+
+type RBACConfig struct {
+    // Optional path to YAML file defining role -> permissions mapping
+    PolicyPath string `env:"RBAC_POLICY_PATH"`
+}
+
+type SeedConfig struct {
+    Enable    bool   `env:"SEED_ENABLE" default:"false"`
+    Email     string `env:"SEED_USER_EMAIL"`
+    Password  string `env:"SEED_USER_PASSWORD"`
+    FirstName string `env:"SEED_USER_FIRST_NAME" default:"Admin"`
+    LastName  string `env:"SEED_USER_LAST_NAME" default:"User"`
+    Role      string `env:"SEED_USER_ROLE" default:"admin"`
 }
 
 type Config struct {
@@ -23,5 +49,9 @@ type Config struct {
     HTTP  HTTPConfig
     DB    DBConfig
     JWT   JWTConfig
+    RBAC  RBACConfig
+    Seed  SeedConfig
     LogLevel string `env:"LOG_LEVEL" default:"debug"`
+    // Directory path for SQL migrations (default: "migrations")
+    MigrationsPath string `env:"MIGRATIONS_PATH" default:"migrations"`
 }

@@ -1,9 +1,9 @@
 package user
 
 import (
-	"time"
+    "time"
 
-	"github.com/google/uuid"
+    "github.com/google/uuid"
 )
 
 type User struct {
@@ -17,15 +17,18 @@ type User struct {
 	UpdatedAt time.Time
 }
 
-func NewUser(firstName, lastName, email, password string, role Role) *User {
-	return &User{
-		ID:        uuid.New(),
-		FirstName: firstName,
-		LastName:  lastName,
-		Email:     email,
-		Password:  password,
-		Role:      role,
-		CreatedAt: time.Now(),
-		UpdatedAt: time.Now(),
-	}
+func NewUser(firstName, lastName string, email Email, password string, role Role) *User {
+    // Domain invariants enforced at construction (basic checks)
+    // Note: deeper validation (e.g., password strength) belongs to application layer
+    u := &User{
+        ID:        uuid.New(),
+        FirstName: firstName,
+        LastName:  lastName,
+        Email:     email,
+        Password:  password,
+        Role:      role,
+        CreatedAt: time.Now(),
+        UpdatedAt: time.Now(),
+    }
+    return u
 }

@@ -1,0 +1,53 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-appsechub}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-appsechub}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-appsechub} -d $${POSTGRES_DB:-appsechub}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: always
+    networks:
+      - backend
+
+  app:
+    image: appsechub:latest
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+    env_file:
+        - .env
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENV: ${ENV:-prod}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      HTTP_PORT: ${HTTP_PORT:-8080}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-appsechub}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      DB_NAME: ${DB_NAME:-appsechub}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      MIGRATIONS_PATH: /app/migrations
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRE_SEC: ${JWT_EXPIRE_SEC:-3600}
+    ports:
+      - "8080:8080"
+    restart: always
+    networks:
+      - backend
+
+volumes:
+  db_data:
+
+networks:
+  backend:
+

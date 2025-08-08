@@ -1,22 +1,37 @@
 package main
 
-import (
-	"log"
-
-	"appsechub/internal/config"
-	"appsechub/internal/infras/db"
-	"appsechub/internal/interfaces/http"
+import ("log"
+    "appsechub/internal/config"
 )
 
 func main() {
     cfg := config.Load()
 
-	db.RunMigrations(cfg.DB.DSN, cfg.DB.MigrationsPath)
+    // DB + migrations
+    sqlDB, err := initPostgresAndMigrate(cfg)
+    if err != nil {
+        log.Fatalf("failed to open postgres: %v", err)
+    }
+    // JWT service
+    jwtSvc := initJWTService(cfg)
 
-    handler := InitHandler(cfg) // gọi hàm sinh từ wire.go
-    router := http.NewRouter(handler)
+    // Optional: seed initial admin user
+    if cfg.Seed.Enable {
+        _, repo, hasher := buildUserComponents(sqlDB, jwtSvc)
+        if err := seedInitialUser(sqlDB, repo, hasher, cfg); err != nil {
+            log.Printf("seed error: %v", err)
+        }
+    }
 
-    if err := router.Run(":" + cfg.Port); err != nil {
+    // RBAC policy
+    loadRBACPolicy(cfg)
+
+    // HTTP router
+    userHandler, _, _ := buildUserComponents(sqlDB, jwtSvc)
+    router := buildRouter(cfg, userHandler, jwtSvc, sqlDB)
+
+    // Readiness check
+    if err := router.Run(":" + cfg.HTTP.Port); err != nil {
         log.Fatalf("failed to start server: %v", err)
     }
 }

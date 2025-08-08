@@ -1,0 +1,62 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: appsechub
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: appsechub
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U appsechub -d appsechub"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    networks:
+      - devnet
+
+  app:
+    image: cosmtrek/air:latest
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ENV: dev
+      LOG_LEVEL: debug
+      HTTP_PORT: 8080
+      # Enable wiregen build tag for dev hot-reload
+      CGO_ENABLED: 0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: appsechub
+      DB_PASSWORD: devpassword
+      DB_NAME: appsechub
+      DB_SSLMODE: disable
+      MIGRATIONS_PATH: /app/migrations
+      JWT_SECRET: change-me-in-dev
+      JWT_EXPIRE_SEC: 3600
+      SEED_ENABLE: ${SEED_ENABLE:-true}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-admin@example.com}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-password}
+      SEED_USER_FIRST_NAME: ${SEED_USER_FIRST_NAME:-Admin}
+      SEED_USER_LAST_NAME: ${SEED_USER_LAST_NAME:-User}
+      SEED_USER_ROLE: ${SEED_USER_ROLE:-admin}
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - air_tmp:/app/tmp
+    command: ["air", "-c", ".air.toml"]
+    networks:
+      - devnet
+
+volumes:
+  dev_db_data:
+  air_tmp:
+
+networks:
+  devnet:
+

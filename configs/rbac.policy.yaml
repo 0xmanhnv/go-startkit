@@ -1,0 +1,8 @@
+roles:
+  admin:
+    - "*"           # full access
+  user:
+    - "user:read"   # basic read permissions
+  viewer:
+    - "user:read"   # readonly
+

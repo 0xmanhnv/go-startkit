@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"appsechub/internal/domain/user"
+    "appsechub/internal/application/dto"
 )
 
 type CreateUserUseCase struct {
@@ -12,8 +13,27 @@ type CreateUserUseCase struct {
 }
 
 func (uc *CreateUserUseCase) Execute(ctx context.Context, input dto.CreateUserRequest) (*dto.UserResponse, error) {
+    emailVO, err := user.NewEmail(input.Email)
+    if err != nil {
+        return nil, err
+    }
+    role := user.Role(input.Role)
+    if !role.IsValid() {
+        return nil, user.ErrInvalidRole
+    }
     hashed := uc.hasher.Hash(input.Password)
-    user := user.NewUser(input.Email, hashed)
-    err := uc.repo.Save(ctx, user)
-    return &dto.UserResponse{ID: user.ID, Email: user.Email}, err
+    newUser := user.NewUser(input.FirstName, input.LastName, emailVO, hashed, role)
+    if err := user.ValidateUser(newUser); err != nil {
+        return nil, err
+    }
+    if err := uc.repo.Save(ctx, newUser); err != nil {
+        return nil, err
+    }
+    return &dto.UserResponse{
+        ID:        newUser.ID,
+        Email:     newUser.Email.String(),
+        FirstName: newUser.FirstName,
+        LastName:  newUser.LastName,
+        CreatedAt: newUser.CreatedAt,
+    }, nil
 }
