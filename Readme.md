@@ -131,6 +131,49 @@ When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
 - Every response includes `X-Request-Id` for correlation.
 
 ## Project layout
+```
+AppSecHub/
+├─ cmd/
+│  └─ api/                  # Composition root (main, bootstrap, wiring)
+├─ internal/
+│  ├─ application/          # Use cases, DTOs, application ports (interfaces)
+│  │  ├─ dto/
+│  │  └─ usecase/
+│  │     └─ userusecase/
+│  ├─ domain/               # Entities, value objects, domain services & errors
+│  │  └─ user/
+│  ├─ interfaces/
+│  │  └─ http/              # HTTP adapters: router, handlers, middleware, apidocs
+│  │     ├─ apidocs/
+│  │     ├─ handler/
+│  │     └─ middleware/
+│  ├─ infras/               # Infrastructure adapters (implement application ports)
+│  │  ├─ auth/              # Refresh token store (Redis)
+│  │  ├─ db/                # DSN, migrations, health checks
+│  │  ├─ ratelimit/         # Distributed rate limiter (Redis)
+│  │  ├─ security/          # JWT service, bcrypt hasher
+│  │  └─ storage/
+│  │     └─ postgres/       # User repository (Postgres)
+│  └─ config/               # Strongly-typed env config & loader
+├─ pkg/                     # Shared utilities (logger, rbac, validator)
+├─ migrations/              # SQL migrations
+├─ build/                   # Dockerfile & build assets
+├─ configs/                 # Example config files (RBAC, etc.)
+├─ docs/                    # Project docs, reviews
+├─ scripts/                 # Helper scripts
+└─ docker-compose*.yml      # Dev/Prod composition
+```
+
+```
+Layered architecture (imports flow)
+
+interfaces/http  →  application (usecases, ports)  →  domain (entities, VOs)
+      ▲                         │
+      │                         └── ports implemented by
+      │                              infrastructure (jwt, db, redis, ...)
+
+cmd/api wires everything together (composition root)
+```
 - `internal/domain` – Entities, ValueObjects, business rules
 - `internal/application` – DTOs, UseCases, Services
 - `internal/interfaces/http` – Router, Handlers, Middleware (Gin)
