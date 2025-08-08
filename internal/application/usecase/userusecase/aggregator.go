@@ -37,10 +37,10 @@ func NewUserUsecases(repo user.Repository, hasher PasswordHasher, jwt ports.Toke
 	}
 }
 
-func NewUserUsecasesWithStore(repo user.Repository, hasher PasswordHasher, jwt ports.TokenIssuer, store ports.RefreshTokenStore) UserUsecases {
+func NewUserUsecasesWithStore(repo user.Repository, hasher PasswordHasher, jwt ports.TokenIssuer, store ports.RefreshTokenStore, refreshTTLSeconds int) UserUsecases {
 	return &userUsecasesAggregator{
 		create:  NewCreateUserUseCase(repo, hasher),
-		login:   NewLoginUserUseCase(repo, hasher, jwt, store),
+		login:   &LoginUserUseCase{repo: repo, hasher: hasher, jwt: jwt, store: store, refreshTTLSeconds: refreshTTLSeconds},
 		getMe:   NewGetMeUseCase(repo),
 		change:  NewChangePasswordUseCase(repo, hasher),
 		refresh: NewRefreshUseCaseWithStore(repo, jwt, store),

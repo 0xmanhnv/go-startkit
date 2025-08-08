@@ -61,8 +61,10 @@ func registerAuthRoutes(v1 *gin.RouterGroup, userHandler *handler.UserHandler, c
 		auth.POST("/login", userHandler.Login)
 	}
 	// Token endpoints (public by design; protected by token semantics)
-	auth.POST("/refresh", userHandler.Refresh)
-	auth.POST("/logout", userHandler.Logout)
+	if cfg != nil && cfg.Security.RefreshEnabled {
+		auth.POST("/refresh", userHandler.Refresh)
+		auth.POST("/logout", userHandler.Logout)
+	}
 	// Protected routes
 	if len(authMiddleware) > 0 {
 		protected := auth.Group("")

@@ -20,6 +20,11 @@ type DBConfig struct {
 	Password string `env:"DB_PASSWORD"`
 	Name     string `env:"DB_NAME"`
 	SSLMode  string `env:"DB_SSLMODE" default:"disable"`
+	// Connection pool tuning
+	MaxOpenConns    int `env:"DB_MAX_OPEN_CONNS" default:"25"`
+	MaxIdleConns    int `env:"DB_MAX_IDLE_CONNS" default:"25"`
+	ConnMaxLifetime int `env:"DB_CONN_MAX_LIFETIME_SEC" default:"900"`
+	ConnMaxIdleTime int `env:"DB_CONN_MAX_IDLE_TIME_SEC" default:"300"`
 }
 
 type JWTConfig struct {
@@ -47,6 +52,10 @@ type SeedConfig struct {
 type SecurityConfig struct {
 	// BcryptCost allows tuning password hashing cost per environment (4-31). 0 = use library default
 	BcryptCost int `env:"BCRYPT_COST" default:"0"`
+	// Refresh token TTL in seconds
+	RefreshTTLSeconds int `env:"REFRESH_TTL_SEC" default:"604800"`
+	// Enable refresh token flow and endpoints
+	RefreshEnabled bool `env:"AUTH_REFRESH_ENABLED" default:"false"`
 }
 
 type Config struct {

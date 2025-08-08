@@ -2,6 +2,7 @@ package main
 
 import (
 	"database/sql"
+	"time"
 
 	"appsechub/internal/application/usecase/userusecase"
 	"appsechub/internal/config"
@@ -11,6 +12,7 @@ import (
 	"appsechub/internal/infras/security"
 	pgstore "appsechub/internal/infras/storage/postgres"
 	httpiface "appsechub/internal/interfaces/http"
+	"appsechub/internal/interfaces/http/apidocs"
 	"appsechub/internal/interfaces/http/handler"
 	"appsechub/internal/interfaces/http/middleware"
 	"appsechub/pkg/logger"
@@ -23,7 +25,24 @@ import (
 func initPostgresAndMigrate(cfg *config.Config) (*sql.DB, error) {
 	dsn := infdb.BuildPostgresDSN(cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.Name, cfg.DB.SSLMode)
 	infdb.RunMigrations(dsn, cfg.MigrationsPath)
-	return pgstore.NewPostgresConnection(dsn)
+	db, err := pgstore.NewPostgresConnection(dsn)
+	if err != nil {
+		return nil, err
+	}
+	// Override pool settings from config
+	if cfg.DB.MaxOpenConns > 0 {
+		db.SetMaxOpenConns(cfg.DB.MaxOpenConns)
+	}
+	if cfg.DB.MaxIdleConns > 0 {
+		db.SetMaxIdleConns(cfg.DB.MaxIdleConns)
+	}
+	if cfg.DB.ConnMaxLifetime > 0 {
+		db.SetConnMaxLifetime(time.Duration(cfg.DB.ConnMaxLifetime) * time.Second)
+	}
+	if cfg.DB.ConnMaxIdleTime > 0 {
+		db.SetConnMaxIdleTime(time.Duration(cfg.DB.ConnMaxIdleTime) * time.Second)
+	}
+	return db, nil
 }
 
 // initJWTService constructs the JWT service and applies optional hardening metadata.
@@ -42,9 +61,9 @@ func buildUserComponents(db *sql.DB, jwtSvc security.JWTService, cfg *config.Con
 	userRepo := pgstore.NewUserRepository(db)
 	hasher := security.NewBcryptHasher(cfg.Security.BcryptCost)
 	var uc userusecase.UserUsecases
-	if cfg.RedisAddr != "" {
+	if cfg.RedisAddr != "" && cfg.Security.RefreshEnabled {
 		store := authinfra.NewRedisRefreshStore(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
-		uc = userusecase.NewUserUsecasesWithStore(userRepo, hasher, jwtSvc, store)
+		uc = userusecase.NewUserUsecasesWithStore(userRepo, hasher, jwtSvc, store, cfg.Security.RefreshTTLSeconds)
 	} else {
 		uc = userusecase.NewUserUsecases(userRepo, hasher, jwtSvc)
 	}
@@ -82,6 +101,10 @@ func buildRouter(cfg *config.Config, userHandler *handler.UserHandler, jwtSvc se
 		// Note: our router builder already registers routes; to keep it non-invasive we can add a group-level middleware
 		// For clarity in this starter, we attach a global middleware that only triggers on /v1/auth/login
 		router.Use(rl.Middleware("/v1/auth/login", cfg.HTTP.LoginRateLimitRPS, cfg.HTTP.LoginRateLimitBurst))
+	}
+	// API Docs (dev-only)
+	if cfg.Env == "dev" {
+		apidocs.Mount(router)
 	}
 	return router
 }

@@ -2,18 +2,19 @@ package userusecase
 
 import (
 	"context"
-	"errors"
 
+	"appsechub/internal/application/apperr"
 	"appsechub/internal/application/dto"
 	"appsechub/internal/application/ports"
 	"appsechub/internal/domain/user"
 )
 
 type LoginUserUseCase struct {
-	repo   user.Repository
-	hasher PasswordHasher
-	jwt    ports.TokenIssuer
-	store  ports.RefreshTokenStore
+	repo              user.Repository
+	hasher            PasswordHasher
+	jwt               ports.TokenIssuer
+	store             ports.RefreshTokenStore
+	refreshTTLSeconds int
 }
 
 func (uc *LoginUserUseCase) Execute(ctx context.Context, input dto.LoginRequest) (*dto.LoginResponse, error) {
@@ -24,10 +25,10 @@ func (uc *LoginUserUseCase) Execute(ctx context.Context, input dto.LoginRequest)
 
 	u, err := uc.repo.GetByEmail(ctx, emailVO)
 	if err != nil {
-		return nil, errors.New("invalid credentials")
+		return nil, apperr.ErrInvalidCredentials
 	}
 	if !uc.hasher.Compare(u.Password, input.Password) {
-		return nil, errors.New("invalid credentials")
+		return nil, apperr.ErrInvalidCredentials
 	}
 
 	token, err := uc.jwt.GenerateToken(u.ID.String(), string(u.Role))
@@ -36,7 +37,11 @@ func (uc *LoginUserUseCase) Execute(ctx context.Context, input dto.LoginRequest)
 	}
 	var refresh string
 	if uc.store != nil {
-		refresh, _ = uc.store.Issue(ctx, u.ID.String(), 3600*24*7) // 7d default
+		ttl := uc.refreshTTLSeconds
+		if ttl <= 0 {
+			ttl = 3600 * 24 * 7
+		}
+		refresh, _ = uc.store.Issue(ctx, u.ID.String(), ttl)
 	}
 
 	return &dto.LoginResponse{

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 
+	"appsechub/internal/application/apperr"
 	"appsechub/internal/application/dto"
 	"appsechub/internal/application/ports"
 	"appsechub/internal/domain/user"
@@ -28,15 +29,15 @@ func NewRefreshUseCaseWithStore(repo user.Repository, jwt ports.TokenIssuer, sto
 
 func (uc *RefreshUseCase) Execute(ctx context.Context, refreshToken string) (*dto.LoginResponse, error) {
 	if uc.store == nil {
-		return nil, errors.New("refresh store not configured")
+		return nil, apperr.ErrRefreshStoreNotConfigured
 	}
 	newRefresh, userID, err := uc.store.Rotate(ctx, refreshToken, 3600*24*7) // 7 days default
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, apperr.ErrInvalidRefreshToken
 	}
 	u, err := uc.repo.GetByID(ctx, mustParseUUID(userID))
 	if err != nil {
-		return nil, errors.New("invalid refresh token")
+		return nil, apperr.ErrInvalidRefreshToken
 	}
 	access, err := uc.jwt.GenerateToken(u.ID.String(), string(u.Role))
 	if err != nil {

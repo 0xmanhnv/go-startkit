@@ -43,17 +43,23 @@ Handler returns HTTP Response
   - `SEED_USER_FIRST_NAME=Admin` (optional)
   - `SEED_USER_LAST_NAME=User` (optional)
   - `SEED_USER_ROLE=admin` (optional)
- - Optional JWT hardening:
+  - Optional JWT hardening:
    - `JWT_ISSUER=appsechub`
    - `JWT_AUDIENCE=appsechub-clients`
    - `JWT_LEEWAY_SEC=30`
- - Optional HTTP security & rate limit:
+  - Optional HTTP security & rate limit:
    - `HTTP_SECURITY_HEADERS=true` (enable common security headers; use behind TLS)
    - `HTTP_LOGIN_RATELIMIT_RPS=1`
    - `HTTP_LOGIN_RATELIMIT_BURST=5`
     - For multi-instance/prod, use distributed limiter (e.g., Redis) instead of in-memory.
   - Optional password hashing:
     - `BCRYPT_COST=12` (4–31). Higher = slower = stronger. Tune per env (dev lower for speed, prod higher ~100–250ms/hash target).
+  - Optional DB pool tuning:
+    - `DB_MAX_OPEN_CONNS=25`, `DB_MAX_IDLE_CONNS=25`
+    - `DB_CONN_MAX_LIFETIME_SEC=900`, `DB_CONN_MAX_IDLE_TIME_SEC=300`
+  - Optional refresh tokens (feature flag):
+    - `AUTH_REFRESH_ENABLED=false` (enable to expose `/v1/auth/refresh` and `/v1/auth/logout`)
+    - `REFRESH_TTL_SEC=604800` (7d default; only used when refresh is enabled)
 
 ## Development (hot reload)
 1) Docker + Air (recommended):
@@ -63,7 +69,20 @@ Handler returns HTTP Response
    - Install Air: `go install github.com/cosmtrek/air@latest`
    - Run: `air -c ./.air.toml`
 
+### DevEx shortcuts
+- Makefile targets:
+  - `make build|run|test|fmt|vet|lint`
+  - `make dev-up|dev-down` (compose dev), `make prod-up|prod-down`
+  - `make tools` (install Air, golangci-lint)
+- Linting: configure via `.golangci.yml` (optional in CI).
+
 Default API base URL: `http://localhost:8080`
+
+### API Docs (dev-only)
+- Available only when `ENV=dev`:
+  - `GET /swagger` (ReDoc viewer)
+  - `GET /openapi.json` (OpenAPI 3.0)
+- Do not expose in production.
 
 ### Distributed rate limit (production)
 - Current limiter is in-memory per instance (OK for dev/single instance).
@@ -86,6 +105,8 @@ Default API base URL: `http://localhost:8080`
 - `POST /v1/auth/register` – create a new user
   - JSON body: `first_name`, `last_name`, `email`, `password`, `role`.
 - `POST /v1/auth/login` – accepts `email/password`, returns JWT.
+- `POST /v1/auth/refresh` – exchange refresh token for new access token (only when `AUTH_REFRESH_ENABLED=true`)
+- `POST /v1/auth/logout` – revoke refresh token (only when `AUTH_REFRESH_ENABLED=true`)
 - Admin example (requires JWT and RBAC permission): `GET /v1/admin/stats`
   - Send header: `Authorization: Bearer <JWT>`
   - Login may be rate limited (HTTP 429) based on `HTTP_LOGIN_RATELIMIT_*`.

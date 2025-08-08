@@ -252,10 +252,13 @@ Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một 
 - Makefile targets: `build`, `run`, `test`, `lint`, `migrate-up`, `migrate-down`.
 
 10) API Docs (dev-only)
-- Tích hợp Swagger/OpenAPI (`swaggo` hoặc `kin-openapi`), expose `/swagger` chỉ ở `ENV=dev`.
+~~Tích hợp Swagger/OpenAPI (dev-only)~~ (ĐÃ THỰC HIỆN)
+- Serve `GET /openapi.json` (embedded OpenAPI 3.0) và `GET /swagger` (ReDoc viewer) khi `ENV=dev`.
+- Không expose ở production.
 
-11) Env templates
-- Bổ sung/điều chỉnh `.env.example` (nếu thiếu):
+~~11) Env templates~~ (ĐÃ THỰC HIỆN)
+- Đã thêm template tại `docs/env.example.md` (copy nội dung ra `.env` ở project root khi cần)
+- Gợi ý biến:
   - `ENV=dev`
   - `HTTP_PORT=8080`
   - `HTTP_CORS_ALLOWED_ORIGINS=*`
@@ -265,9 +268,13 @@ Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một 
   - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=appsechub` `JWT_AUDIENCE=appsechub-clients` `JWT_LEEWAY_SEC=30`
   - `SEED_ENABLE=true` và bộ `SEED_*` cho admin dev
 
-12) Compose dev/prod
-- `docker-compose.dev.yml`: đã ok cho bind mount + Air; đảm bảo `HTTP_SECURITY_HEADERS=false` để tránh HSTS local.
-- `docker-compose.yml`: đặt `ENV=prod`, set secrets qua env an toàn (đừng commit).
+~~12) Compose dev/prod~~ (ĐÃ THỰC HIỆN)
+- `docker-compose.dev.yml`: có `db`, `redis`, bind mount + Air; `HTTP_SECURITY_HEADERS=false` để tránh HSTS local.
+- `docker-compose.yml`: có `db`, `redis`, build image, inject secrets qua env (`JWT_SECRET`, `DB_PASSWORD`).
+
+~~13) Refresh tokens (feature flag)~~ (ĐÃ THỰC HIỆN)
+- Redis-backed refresh store + endpoints `/v1/auth/refresh`, `/v1/auth/logout` (chỉ bật khi `AUTH_REFRESH_ENABLED=true`).
+- TTL cấu hình qua `REFRESH_TTL_SEC` (mặc định 7 ngày).
 
 ~~13) Gom nhóm route `auth` vào một hàm~~ (ĐÃ THỰC HIỆN)
 - File: `internal/interfaces/http/route.go`

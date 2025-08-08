@@ -50,11 +50,18 @@ func (h *UserHandler) Login(c *gin.Context) {
 	}
 	resp, err := h.uc.Login(c.Request.Context(), req)
 	if err != nil {
-		switch err {
-		case domuser.ErrUserNotFound:
-			response.Unauthorized(c, "invalid_credentials", "email or password is incorrect")
+		status, code, msg := response.FromError(err)
+		switch status {
+		case 400:
+			response.BadRequest(c, code, msg)
+		case 401:
+			response.Unauthorized(c, code, msg)
+		case 404:
+			response.NotFound(c, code, msg)
+		case 409:
+			response.Conflict(c, code, msg)
 		default:
-			response.Unauthorized(c, "invalid_credentials", "email or password is incorrect")
+			response.InternalError(c, code, msg)
 		}
 		return
 	}
@@ -73,7 +80,19 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 	}
 	resp, err := h.uc.Refresh(c.Request.Context(), body.RefreshToken)
 	if err != nil {
-		response.Unauthorized(c, "invalid_refresh_token", "refresh token invalid or expired")
+		status, code, msg := response.FromError(err)
+		switch status {
+		case 400:
+			response.BadRequest(c, code, msg)
+		case 401:
+			response.Unauthorized(c, code, msg)
+		case 404:
+			response.NotFound(c, code, msg)
+		case 409:
+			response.Conflict(c, code, msg)
+		default:
+			response.InternalError(c, code, msg)
+		}
 		return
 	}
 	response.OK(c, resp)
@@ -90,7 +109,19 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		return
 	}
 	if err := h.uc.Logout(c.Request.Context(), body.RefreshToken); err != nil {
-		response.Unauthorized(c, "invalid_refresh_token", "refresh token invalid or expired")
+		status, code, msg := response.FromError(err)
+		switch status {
+		case 400:
+			response.BadRequest(c, code, msg)
+		case 401:
+			response.Unauthorized(c, code, msg)
+		case 404:
+			response.NotFound(c, code, msg)
+		case 409:
+			response.Conflict(c, code, msg)
+		default:
+			response.InternalError(c, code, msg)
+		}
 		return
 	}
 	response.OK(c, gin.H{"revoked": true})
