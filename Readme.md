@@ -325,6 +325,33 @@ cmd/api          → all (composition root only)
   - RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
   - Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
 
+## Rename project/module
+If you fork this template and want to change the module/project name (Go module path), follow these steps.
+
+1) Choose the new module path (example: `github.com/you/securehub`). Then update `go.mod`:
+```bash
+NEW=github.com/you/securehub
+go mod edit -module "$NEW"
+```
+
+2) Update all internal imports from `appsechub/...` to the new module path:
+```bash
+OLD=appsechub
+NEW=github.com/you/securehub
+rg -l --type go "\"$OLD/" | xargs -r sed -i "s#\"$OLD/#\"$NEW/#g"
+go mod tidy
+go build ./...
+```
+
+3) Optional but recommended – align names across configs/docs:
+- Docker image/name and references in `docker-compose*.yml` (e.g., `appsechub` → your new name)
+- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` ("AppSecHub API" → your new title)
+- README/CHANGELOG headings and references
+- Default JWT metadata in `internal/config/config.go` (issuer/audience: `appsechub` → your values)
+- Dev DB name/user in compose files (if you want to keep everything consistent)
+
+4) If publishing the repo, ensure the module path matches the canonical VCS path (e.g., GitHub URL) to avoid `go get` issues.
+
 ## Security recommendations
 - Password hashing with bcrypt (integrated); increase cost appropriately for production.
 - Manage `JWT_SECRET` with a secret manager; use short TTL; consider refresh tokens/rotation.
