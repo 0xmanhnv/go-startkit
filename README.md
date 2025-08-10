@@ -360,24 +360,28 @@ cmd/api          → all (composition root only)
   - RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
   - Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
 
-## Rename project/module
-If you fork this template and want to change the Go module path, use the provided script.
+## Rename project/module & keeping up-to-date
+If you start a new project from this starter kit, or want to pull updates later, use the script below.
 
-1) Use the script to rename the module and update imports:
+1) Initialize a new project (template or fork)
 ```bash
-# Basic usage (OLD inferred from go.mod):
-./scripts/rename_project.sh github.com/you/yourapp
-
-# Explicit OLD module if needed (e.g., current module is gostartkit):
+# Change Go module path and update imports once
 ./scripts/rename_project.sh github.com/you/yourapp gostartkit
-
-# The script will:
-# - edit go.mod to the new module path
-# - rewrite imports from "<OLD>/..." to "<NEW>/..."
-# - run `go mod tidy` and `go build ./...`
+go mod tidy && go build ./...
 ```
 
-2) Optional but recommended – align names across configs/docs:
+2) Pulling upstream changes later (when you forked)
+```bash
+git remote add upstream <starter-kit-url>
+git fetch upstream
+git merge upstream/dev   # hoặc rebase tuỳ workflow
+
+# If new files from upstream reintroduce old import prefix, run the script again
+./scripts/rename_project.sh github.com/you/yourapp gostartkit
+go mod tidy && go build ./...
+```
+
+3) Optional but recommended – align names across configs/docs:
 - Docker image/name and references in `docker-compose*.yml` (e.g., `gostartkit` → your image name)
 - OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` (e.g., "Go StartKit API")
 - README/CHANGELOG headings and references
