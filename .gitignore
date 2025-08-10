@@ -64,9 +64,6 @@ wire_gen.go
 # Air live reload
 tmp/
 
-# Docker
-.dockerignore
-
 # Kubernetes
 *.kubeconfig
 

@@ -1,0 +1,296 @@
+{
+  "openapi": "3.0.3",
+  "info": {
+    "title": "Go StartKit API",
+    "version": "0.1.0",
+    "description": "Go StartKit API. Envelope: { data | error | meta }. Error.code is a stable, machine-readable string."
+  },
+  "servers": [ { "url": "/" } ],
+  "components": {
+    "securitySchemes": {
+      "bearerAuth": {
+        "type": "http",
+        "scheme": "bearer",
+        "bearerFormat": "JWT",
+        "description": "Send Authorization: Bearer <access_token>"
+      }
+    },
+    "schemas": {
+      "ErrorBody": {
+        "type": "object",
+        "description": "Standard error body. code is a stable machine-readable error code.",
+        "properties": {
+          "code": { "type": "string" },
+          "message": { "type": "string" }
+        },
+        "required": ["code", "message"]
+      },
+      "EnvelopeError": {
+        "type": "object",
+        "properties": {
+          "error": { "$ref": "#/components/schemas/ErrorBody" },
+          "meta": { "type": "object", "additionalProperties": true }
+        },
+        "required": ["error"]
+      },
+      "UserResponse": {
+        "type": "object",
+        "description": "Public user fields",
+        "properties": {
+          "id": { "type": "string", "format": "uuid" },
+          "email": { "type": "string", "format": "email" },
+          "first_name": { "type": "string" },
+          "last_name": { "type": "string" },
+          "created_at": { "type": "string", "format": "date-time" }
+        },
+        "required": ["id", "email", "first_name", "last_name", "created_at"]
+      },
+      "LoginResponse": {
+        "type": "object",
+        "description": "Login/Refresh response containing tokens and user info",
+        "properties": {
+          "access_token": { "type": "string" },
+          "refresh_token": { "type": "string" },
+          "user": { "$ref": "#/components/schemas/UserResponse" }
+        },
+        "required": ["access_token", "user"]
+      },
+      "EnvelopeUserResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/UserResponse" },
+          "error": { "$ref": "#/components/schemas/ErrorBody" },
+          "meta": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "EnvelopeLoginResponse": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/LoginResponse" },
+          "error": { "$ref": "#/components/schemas/ErrorBody" },
+          "meta": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "ChangedResponse": {
+        "type": "object",
+        "properties": { "changed": { "type": "boolean" } },
+        "required": ["changed"]
+      },
+      "EnvelopeChanged": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/ChangedResponse" },
+          "error": { "$ref": "#/components/schemas/ErrorBody" },
+          "meta": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "RevokedResponse": {
+        "type": "object",
+        "properties": { "revoked": { "type": "boolean" } },
+        "required": ["revoked"]
+      },
+      "EnvelopeRevoked": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/RevokedResponse" },
+          "error": { "$ref": "#/components/schemas/ErrorBody" },
+          "meta": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "StatsResponse": {
+        "type": "object",
+        "properties": { "ok": { "type": "boolean" } },
+        "required": ["ok"]
+      },
+      "EnvelopeStats": {
+        "type": "object",
+        "properties": {
+          "data": { "$ref": "#/components/schemas/StatsResponse" },
+          "error": { "$ref": "#/components/schemas/ErrorBody" },
+          "meta": { "type": "object", "additionalProperties": true }
+        }
+      },
+      "CreateUserRequest": {
+        "type": "object",
+        "description": "Registration payload",
+        "properties": {
+          "first_name": { "type": "string", "minLength": 1 },
+          "last_name": { "type": "string", "minLength": 1 },
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 8 },
+          "role": { "type": "string" }
+        },
+        "required": ["first_name", "last_name", "email", "password", "role"]
+      },
+      "LoginRequest": {
+        "type": "object",
+        "description": "Login payload",
+        "properties": {
+          "email": { "type": "string", "format": "email" },
+          "password": { "type": "string", "minLength": 1 }
+        },
+        "required": ["email", "password"]
+      },
+      "ChangePasswordRequest": {
+        "type": "object",
+        "description": "Change password payload",
+        "properties": {
+          "current_password": { "type": "string", "minLength": 8 },
+          "new_password": { "type": "string", "minLength": 8 }
+        },
+        "required": ["current_password", "new_password"]
+      },
+      "RefreshRequest": {
+        "type": "object",
+        "description": "Refresh token payload",
+        "properties": { "refresh_token": { "type": "string" } },
+        "required": ["refresh_token"]
+      },
+      "LogoutRequest": {
+        "type": "object",
+        "description": "Logout payload (revoke refresh token)",
+        "properties": { "refresh_token": { "type": "string" } },
+        "required": ["refresh_token"]
+      }
+    },
+    "examples": {
+      "EnvelopeErrorUnauthorized": {
+        "summary": "401 Unauthorized",
+        "value": { "error": { "code": "invalid_credentials", "message": "email or password is incorrect" } }
+      },
+      "EnvelopeErrorInvalidRefresh": {
+        "summary": "401 Invalid refresh token",
+        "value": { "error": { "code": "invalid_refresh_token", "message": "refresh token invalid or expired" } }
+      },
+      "EnvelopeUser": {
+        "summary": "User envelope",
+        "value": { "data": { "id": "3e0d4f6e-2e78-4c1b-8b0f-6a0e2a1f6b21", "email": "user@example.com", "first_name": "John", "last_name": "Doe", "created_at": "2024-01-01T12:00:00Z" } }
+      },
+      "EnvelopeLogin": {
+        "summary": "Login envelope",
+        "value": { "data": { "access_token": "<jwt>", "refresh_token": "<refresh>", "user": { "id": "3e0d4f6e-2e78-4c1b-8b0f-6a0e2a1f6b21", "email": "user@example.com", "first_name": "John", "last_name": "Doe", "created_at": "2024-01-01T12:00:00Z" } } }
+      },
+      "EnvelopeChanged": { "summary": "Changed", "value": { "data": { "changed": true } } },
+      "EnvelopeRevoked": { "summary": "Revoked", "value": { "data": { "revoked": true } } },
+      "EnvelopeStats": { "summary": "Stats", "value": { "data": { "ok": true } } }
+    }
+  },
+  "paths": {
+    "/v1/auth/register": {
+      "post": {
+        "summary": "Register user",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/CreateUserRequest" } }
+          }
+        },
+        "responses": {
+          "201": { "description": "Created", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeUserResponse" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeUser" } } } } },
+          "400": { "description": "Bad Request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } },
+          "409": { "description": "Conflict (email exists)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } }
+        }
+      }
+    },
+    "/v1/auth/login": {
+      "post": {
+        "summary": "Login",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/LoginRequest" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeLoginResponse" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeLogin" } } } } },
+          "401": { "description": "Unauthorized (invalid credentials)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" }, "examples": { "invalid": { "$ref": "#/components/examples/EnvelopeErrorUnauthorized" } } } } },
+          "429": {
+            "description": "Too Many Requests",
+            "headers": {
+              "Retry-After": { "schema": { "type": "string" }, "description": "Seconds to wait before retrying" },
+              "X-RateLimit-Limit": { "schema": { "type": "string" } },
+              "X-RateLimit-Remaining": { "schema": { "type": "string" } },
+              "X-RateLimit-Reset": { "schema": { "type": "string" }, "description": "Epoch seconds when the window resets" }
+            },
+            "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } }
+          }
+        }
+      }
+    },
+    "/v1/auth/refresh": {
+      "post": {
+        "summary": "Refresh access token (feature-flagged)",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": { "schema": { "$ref": "#/components/schemas/RefreshRequest" } }
+          }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeLoginResponse" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeLogin" } } } } },
+          "401": { "description": "Unauthorized (invalid refresh token)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" }, "examples": { "invalid": { "$ref": "#/components/examples/EnvelopeErrorInvalidRefresh" } } } } }
+        }
+      }
+    },
+    "/v1/auth/logout": {
+      "post": {
+        "summary": "Logout (revoke refresh token, feature-flagged)",
+        "tags": ["Auth"],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/LogoutRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeRevoked" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeRevoked" } } } } },
+          "401": { "description": "Unauthorized (invalid refresh token)", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" }, "examples": { "invalid": { "$ref": "#/components/examples/EnvelopeErrorInvalidRefresh" } } } } }
+        }
+      }
+    },
+    "/v1/auth/me": {
+      "get": {
+        "summary": "Get current user",
+        "tags": ["Auth"],
+        "security": [ { "bearerAuth": [] } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeUserResponse" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeUser" } } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } },
+          "404": { "description": "Not Found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } }
+        }
+      }
+    },
+    "/v1/auth/change-password": {
+      "post": {
+        "summary": "Change password",
+        "tags": ["Auth"],
+        "security": [ { "bearerAuth": [] } ],
+        "requestBody": {
+          "required": true,
+          "content": { "application/json": { "schema": { "$ref": "#/components/schemas/ChangePasswordRequest" } } }
+        },
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeChanged" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeChanged" } } } } },
+          "400": { "description": "Bad Request", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } },
+          "404": { "description": "Not Found", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } }
+        }
+      }
+    },
+    "/v1/admin/stats": {
+      "get": {
+        "summary": "Admin stats",
+        "tags": ["Admin"],
+        "security": [ { "bearerAuth": [] } ],
+        "responses": {
+          "200": { "description": "OK", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeStats" }, "examples": { "success": { "$ref": "#/components/examples/EnvelopeStats" } } } } },
+          "401": { "description": "Unauthorized", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } },
+          "403": { "description": "Forbidden", "content": { "application/json": { "schema": { "$ref": "#/components/schemas/EnvelopeError" } } } }
+        }
+      }
+    },
+    "/healthz": { "get": { "summary": "Health", "tags": ["Health"], "responses": { "200": { "description": "OK" } } } },
+    "/readyz": { "get": { "summary": "Readiness", "tags": ["Health"], "responses": { "200": { "description": "OK" } } } }
+  }
+}

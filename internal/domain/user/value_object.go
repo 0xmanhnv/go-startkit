@@ -1,8 +1,7 @@
 package user
 
 import (
-	"fmt"
-	"strings"
+    "strings"
 )
 
 // Email
@@ -19,7 +18,7 @@ func (e Email) IsValid() bool {
 func NewEmail(s string) (Email, error) {
     email := Email(strings.TrimSpace(s))
     if !email.IsValid() {
-        return "", fmt.Errorf("invalid email format")
+        return "", ErrInvalidEmail
     }
     return email, nil
 }

@@ -1,0 +1,85 @@
+services:
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: gostartkit
+      POSTGRES_PASSWORD: devpassword
+      POSTGRES_DB: gostartkit
+    ports:
+      - "5432:5432"
+    volumes:
+      - dev_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gostartkit -d gostartkit"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    networks:
+      - devnet
+
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 2s
+      retries: 20
+    networks:
+      - devnet
+
+  app:
+    image: cosmtrek/air:latest
+    working_dir: /app
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ENV: dev
+      LOG_LEVEL: debug
+      HTTP_PORT: 8080
+      HTTP_CORS_ALLOWED_ORIGINS: "*"
+      HTTP_SECURITY_HEADERS: false
+      # Enable wiregen build tag for dev hot-reload
+      CGO_ENABLED: 0
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: gostartkit
+      DB_PASSWORD: devpassword
+      DB_NAME: gostartkit
+      DB_SSLMODE: disable
+      MIGRATIONS_PATH: /app/migrations
+      JWT_SECRET: change-me-in-dev
+      JWT_EXPIRE_SEC: 3600
+      BCRYPT_COST: 10
+      AUTH_REFRESH_ENABLED: ${AUTH_REFRESH_ENABLED:-true}
+      REFRESH_TTL_SEC: ${REFRESH_TTL_SEC:-604800}
+      REDIS_ADDR: redis:6379
+      REDIS_PASSWORD: ""
+      REDIS_DB: 0
+      SEED_ENABLE: ${SEED_ENABLE:-true}
+      SEED_USER_EMAIL: ${SEED_USER_EMAIL:-admin@example.com}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:-password}
+      SEED_USER_FIRST_NAME: ${SEED_USER_FIRST_NAME:-Admin}
+      SEED_USER_LAST_NAME: ${SEED_USER_LAST_NAME:-User}
+      SEED_USER_ROLE: ${SEED_USER_ROLE:-admin}
+    ports:
+      - "8080:8080"
+    volumes:
+      - .:/app
+      - air_tmp:/app/tmp
+    command: ["air", "-c", ".air.toml"]
+    networks:
+      - devnet
+
+volumes:
+  dev_db_data:
+  air_tmp:
+
+networks:
+  devnet:
+

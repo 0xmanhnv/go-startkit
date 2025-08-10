@@ -1,0 +1,37 @@
+# Air config for hot-reload in development
+
+root = "."
+tmp_dir = "tmp"
+
+[build]
+# Build command for your app (binary output in tmp/)
+# -buildvcs=false avoids VCS errors when the container lacks git
+cmd = "go build -trimpath -buildvcs=false -o ./tmp/app ./cmd/api"
+bin = "./tmp/app"
+
+# File watching rules
+include_ext = ["go", "tpl", "tmpl", "html"]
+exclude_dir = [
+  "tmp",
+  "vendor",
+  ".git",
+  "build",
+  "docs",
+  "scripts",
+  "dist",
+  "internal/tests",
+]
+exclude_regex = ["_test\\.go$"]
+follow_symlink = true
+stop_on_error = true
+log = "build"
+
+[log]
+time = true
+
+[screen]
+clear_on_rebuild = true
+
+[misc]
+clean_on_exit = true
+

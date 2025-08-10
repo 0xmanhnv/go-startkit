@@ -1,0 +1,76 @@
+services:
+  redis:
+    image: redis:7-alpine
+    command: ["redis-server", "--appendonly", "yes"]
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: always
+    networks:
+      - backend
+  db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: ${DB_USER:-gostartkit}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      POSTGRES_DB: ${DB_NAME:-gostartkit}
+    volumes:
+      - db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-gostartkit} -d $${POSTGRES_DB:-gostartkit}"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    restart: always
+    networks:
+      - backend
+
+  app:
+    image: gostartkit:latest
+    build:
+      context: .
+      dockerfile: build/Dockerfile
+    env_file:
+        - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      ENV: ${ENV:-prod}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+      HTTP_PORT: ${HTTP_PORT:-8080}
+      HTTP_CORS_ALLOWED_ORIGINS: ${HTTP_CORS_ALLOWED_ORIGINS:-https://your-frontend.example}
+      HTTP_SECURITY_HEADERS: ${HTTP_SECURITY_HEADERS:-true}
+      DB_HOST: db
+      DB_PORT: ${DB_PORT:-5432}
+      DB_USER: ${DB_USER:-gostartkit}
+      DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
+      DB_NAME: ${DB_NAME:-gostartkit}
+      DB_SSLMODE: ${DB_SSLMODE:-disable}
+      MIGRATIONS_PATH: /app/migrations
+      JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}
+      JWT_EXPIRE_SEC: ${JWT_EXPIRE_SEC:-3600}
+      BCRYPT_COST: ${BCRYPT_COST:-12}
+      AUTH_REFRESH_ENABLED: ${AUTH_REFRESH_ENABLED:-false}
+      REFRESH_TTL_SEC: ${REFRESH_TTL_SEC:-604800}
+      REDIS_ADDR: ${REDIS_ADDR}
+      REDIS_PASSWORD: ${REDIS_PASSWORD}
+      REDIS_DB: ${REDIS_DB:-0}
+    ports:
+      - "8080:8080"
+    restart: always
+    networks:
+      - backend
+
+volumes:
+  db_data:
+
+networks:
+  backend:
+
