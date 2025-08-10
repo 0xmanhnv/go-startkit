@@ -32,8 +32,8 @@ type DBConfig struct {
 type JWTConfig struct {
 	Secret    string `env:"JWT_SECRET"`
 	ExpireSec int    `env:"JWT_EXPIRE_SEC" default:"3600"`
-	Issuer    string `env:"JWT_ISSUER" default:"appsechub"`
-	Audience  string `env:"JWT_AUDIENCE" default:"appsechub-clients"`
+	Issuer    string `env:"JWT_ISSUER" default:"app"`
+	Audience  string `env:"JWT_AUDIENCE" default:"app-clients"`
 	LeewaySec int    `env:"JWT_LEEWAY_SEC" default:"30"`
 }
 

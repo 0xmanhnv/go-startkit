@@ -1,9 +1,9 @@
 {
   "openapi": "3.0.3",
   "info": {
-    "title": "AppSecHub API",
+    "title": "Go StartKit API",
     "version": "0.1.0",
-    "description": "AppSecHub starter kit API. Envelope: { data | error | meta }. Error.code is a stable, machine-readable string."
+    "description": "Go StartKit API. Envelope: { data | error | meta }. Error.code is a stable, machine-readable string."
   },
   "servers": [ { "url": "/" } ],
   "components": {

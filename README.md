@@ -1,6 +1,6 @@
-# AppSecHub
+# Go StartKit
 
-AppSecHub is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
+Go StartKit is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
 
 ## Architecture diagrams
 - Project layout (directories): see section "Project layout"
@@ -50,9 +50,9 @@ Handler returns HTTP Response
   - `SEED_USER_FIRST_NAME=Admin` (optional)
   - `SEED_USER_LAST_NAME=User` (optional)
   - `SEED_USER_ROLE=admin` (optional)
-  - Optional JWT hardening:
-   - `JWT_ISSUER=appsechub`
-   - `JWT_AUDIENCE=appsechub-clients`
+- Optional JWT hardening:
+   - `JWT_ISSUER=app` (default)
+   - `JWT_AUDIENCE=app-clients` (default)
    - `JWT_LEEWAY_SEC=30`
   - Optional HTTP security & rate limit:
    - `HTTP_SECURITY_HEADERS=true` (enable common security headers; use behind TLS)
@@ -85,6 +85,41 @@ Handler returns HTTP Response
 - Linting: configure via `.golangci.yml` (optional in CI).
 
 Default API base URL: `http://localhost:8080`
+
+## Testing
+
+[![Go version](https://img.shields.io/badge/go-1.24+-blue)](https://go.dev)
+[![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+
+### Unit tests
+- Run all unit tests:
+  ```bash
+  go test ./...
+  ```
+
+### Integration tests (Postgres + Redis)
+- Start test services and run all integration tests via Makefile:
+  ```bash
+  make test-int-all
+  ```
+- Or manually with docker compose then run tests:
+  ```bash
+  docker compose -f docker-compose.test.yml up -d
+  DB_HOST=localhost DB_PORT=55432 DB_USER=gostartkit DB_PASSWORD=devpassword DB_NAME=gostartkit \
+  REDIS_ADDR=localhost:56379 \
+  go test -tags=integration ./internal/tests/integration -v
+  ```
+- Or using the convenience script (supports filtering and keeping services):
+  ```bash
+  ./scripts/test_integration.sh                   # run all
+  ./scripts/test_integration.sh -- -run Test...   # run matched tests
+  ./scripts/test_integration.sh --keep            # keep services running after tests
+  ```
+
+Notes:
+- Test Postgres listens on `localhost:55432` and Redis on `localhost:56379` (from `docker-compose.test.yml`).
+- Integration tests are guarded by build tag `integration`; IDE users can add `"gopls.buildFlags": ["-tags=integration"]` to avoid editor warnings when opening tagged files.
 
 ### API Docs (dev-only)
 - Available only when `ENV=dev`:
@@ -139,7 +174,7 @@ When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
 
 ## Project layout
 ```
-AppSecHub/
+GoStartKit/
 ├─ cmd/
 │  └─ api/                  # Composition root (main, bootstrap, wiring)
 ├─ internal/
@@ -294,29 +329,29 @@ cmd/api          → all (composition root only)
 ```
 
 ### Naming & conventions (DDD / Clean Architecture)
-- Phân định vai trò theo lớp:
-  - Domain: Entities, Value Objects, Domain Services (chỉ business logic thuần), Domain Errors.
-  - Application: Use Cases (điều phối), Ports (interfaces) cho phụ thuộc ra ngoài (Token, Email, SMS, ObjectStorage...). Không import hạ tầng.
-  - Infrastructure: Adapters/Implementations cho các Ports (JWT, SMTP, Twilio, S3, Postgres...). Không biết HTTP/use case.
-  - Composition Root (`cmd/api`): Wire mọi thứ (khởi tạo infra, inject vào ports/use cases, tạo router).
+- Layer responsibilities:
+  - Domain: Entities, Value Objects, Domain Services (business-only), Domain Errors.
+  - Application: Use Cases (orchestration), Ports (interfaces) for outward dependencies (Token, Email, SMS, ObjectStorage...). Must not import infrastructure.
+  - Infrastructure: Adapters/implementations for Ports (JWT, SMTP, Twilio, S3, Postgres...). No knowledge of HTTP/use cases.
+  - Composition Root (`cmd/api`): Wire everything (init infra, inject ports/use cases, build router).
 
-- Về đặt tên (naming):
-  - Thư mục `internal/application/ports/` chứa các PORTS (interfaces/func adapters) mà Application cần.
-  - Domain Service (nếu có) phải đặt ở `internal/domain/...` và không phụ thuộc application/infra.
-  - Middleware/HTTP helpers ở `internal/interfaces/http/...` chỉ map/biến đổi, không chứa business logic.
+- Naming guidelines:
+  - `internal/application/ports/` contains the application Ports (interfaces/function adapters).
+  - Domain Services (if any) live under `internal/domain/...` and must not depend on application/infra.
+  - Middleware/HTTP helpers under `internal/interfaces/http/...` should only map/transform; no business logic.
 
-- Ví dụ ports trong Application:
-  - `TokenIssuer` (phát token) → implemented bởi `internal/infras/security`.
-  - `EmailSender`, `SMSSender` → implemented bởi `internal/infras/notify/...`.
-  - `ObjectStorage` → implemented bởi `internal/infras/storage/...`.
-  - Inject các ports tại `cmd/api/bootstrap.go` để giữ Inversion of Control chặt chẽ.
+- Example Ports in Application:
+  - `TokenIssuer` → implemented in `internal/infras/security`.
+  - `EmailSender`, `SMSSender` → implemented in `internal/infras/notify/...`.
+  - `ObjectStorage` → implemented in `internal/infras/storage/...`.
+  - Inject ports in `cmd/api/bootstrap.go` to keep strict Inversion of Control.
 
-#### Ports glossary (giải nghĩa tên gọi đề xuất)
-- Issuer: thành phần “phát hành” (issue) một loại thông tin, ví dụ token (JWT). Ví dụ: `TokenIssuer.Generate(userID, role)`.
-- Validator/Verifier: thành phần xác thực/kiểm chứng một giá trị (ví dụ: `Validate(token)`), thường dùng ở middleware.
-- Sender: thành phần “gửi” một thông điệp (Email/SMS), ví dụ `EmailSender.Send(...)`, `SMSSender.Send(...)`.
-- Storage: thành phần lưu trữ đối tượng/blob (ví dụ `ObjectStorage.Put/Get/Delete`).
-- Provider/Gateway: adapter kết nối tới hệ thống bên ngoài (payment, oauth...), có thể dùng nếu phù hợp ngữ cảnh.
+#### Ports glossary
+- Issuer: component that issues a value (e.g., token/JWT). Example: `TokenIssuer.Generate(userID, role)`.
+- Validator/Verifier: component that validates/verifies a value (e.g., `Validate(token)`), often used in middleware.
+- Sender: component that sends a message (Email/SMS), e.g., `EmailSender.Send(...)`, `SMSSender.Send(...)`.
+- Storage: component that stores objects/blobs (e.g., `ObjectStorage.Put/Get/Delete`).
+- Provider/Gateway: adapter to external systems (payment, oauth...), when applicable.
 
 ## Documentation
 - Codebase review & pending fixes: `docs/review.md`
@@ -326,29 +361,28 @@ cmd/api          → all (composition root only)
   - Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
 
 ## Rename project/module
-If you fork this template and want to change the module/project name (Go module path), follow these steps.
+If you fork this template and want to change the Go module path, use the provided script.
 
-1) Choose the new module path (example: `github.com/you/securehub`). Then update `go.mod`:
+1) Use the script to rename the module and update imports:
 ```bash
-NEW=github.com/you/securehub
-go mod edit -module "$NEW"
+# Basic usage (OLD inferred from go.mod):
+./scripts/rename_project.sh github.com/you/yourapp
+
+# Explicit OLD module if needed (e.g., current module is gostartkit):
+./scripts/rename_project.sh github.com/you/yourapp gostartkit
+
+# The script will:
+# - edit go.mod to the new module path
+# - rewrite imports from "<OLD>/..." to "<NEW>/..."
+# - run `go mod tidy` and `go build ./...`
 ```
 
-2) Update all internal imports from `appsechub/...` to the new module path:
-```bash
-OLD=appsechub
-NEW=github.com/you/securehub
-rg -l --type go "\"$OLD/" | xargs -r sed -i "s#\"$OLD/#\"$NEW/#g"
-go mod tidy
-go build ./...
-```
-
-3) Optional but recommended – align names across configs/docs:
-- Docker image/name and references in `docker-compose*.yml` (e.g., `appsechub` → your new name)
-- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` ("AppSecHub API" → your new title)
+2) Optional but recommended – align names across configs/docs:
+- Docker image/name and references in `docker-compose*.yml` (e.g., `gostartkit` → your image name)
+- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` (e.g., "Go StartKit API")
 - README/CHANGELOG headings and references
-- Default JWT metadata in `internal/config/config.go` (issuer/audience: `appsechub` → your values)
-- Dev DB name/user in compose files (if you want to keep everything consistent)
+- Default JWT metadata in `internal/config/config.go` (issuer/audience: defaults are `app`/`app-clients`)
+- Dev DB name/user in compose files (defaults currently `gostartkit`)
 
 4) If publishing the repo, ensure the module path matches the canonical VCS path (e.g., GitHub URL) to avoid `go get` issues.
 

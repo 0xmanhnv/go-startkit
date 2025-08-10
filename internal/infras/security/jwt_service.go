@@ -85,7 +85,7 @@ func (j *jwtService) ValidateToken(tokenStr string) (*AppClaims, error) {
 		if j.audience != "" && !containsAudience(claims.Audience, j.audience) {
 			return nil, errors.New("invalid audience")
 		}
-		// NotBefore: nếu now+leeway vẫn trước NBF thì token chưa hợp lệ
+		// NotBefore: if (now + leeway) is still before NBF, the token is not yet valid
 		if claims.NotBefore != nil {
 			now := time.Now()
 			if now.Add(j.leeway).Before(claims.NotBefore.Time) {

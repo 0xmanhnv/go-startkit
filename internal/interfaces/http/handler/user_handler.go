@@ -1,11 +1,11 @@
 package handler
 
 import (
-	"appsechub/internal/application/dto"
-	"appsechub/internal/application/usecase/userusecase"
-	domuser "appsechub/internal/domain/user"
-	"appsechub/internal/interfaces/http/response"
-	"appsechub/internal/interfaces/http/validation"
+	"gostartkit/internal/application/dto"
+	"gostartkit/internal/application/usecase/userusecase"
+	domuser "gostartkit/internal/domain/user"
+	"gostartkit/internal/interfaces/http/response"
+	"gostartkit/internal/interfaces/http/validation"
 
 	"github.com/gin-gonic/gin"
 )

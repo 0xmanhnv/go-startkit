@@ -1,7 +1,7 @@
-APP_NAME := appsechub
+APP_NAME := app
 PKG := ./...
 
-.PHONY: build run test fmt vet lint tools dev-up dev-down prod-up prod-down migrate-up migrate-down swagger
+.PHONY: build run test test-int test-int-all fmt vet lint tools dev-up dev-down prod-up prod-down migrate-up migrate-down swagger
 
 build:
 	go build $(PKG)
@@ -11,6 +11,19 @@ run:
 
 test:
 	go test -race -cover $(PKG)
+
+test-int:
+	@echo "Running integration tests (requires Docker)..."
+	go test -tags=integration ./internal/tests/integration -v
+
+test-int-all:
+	@echo "Starting compose for integration tests..."
+	docker compose -f docker-compose.test.yml up -d
+	@echo "Running integration tests (DB+Redis)..."
+	DB_HOST?=localhost DB_PORT?=55432 DB_USER?=gostartkit DB_PASSWORD?=devpassword DB_NAME?=gostartkit REDIS_ADDR?=localhost:56379 \
+	go test -tags=integration ./internal/tests/integration -v || RET=$$?; \
+	printf "\nStopping compose...\n"; docker compose -f docker-compose.test.yml down -v; \
+	exit $${RET:-0}
 
 fmt:
 	go fmt $(PKG)

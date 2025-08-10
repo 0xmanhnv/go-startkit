@@ -5,9 +5,9 @@ tmp_dir = "tmp"
 
 [build]
 # Build command for your app (binary output in tmp/)
-# -buildvcs=false tránh lỗi khi container không có git
-cmd = "go build -trimpath -buildvcs=false -o ./tmp/appsechub ./cmd/api"
-bin = "./tmp/appsechub"
+# -buildvcs=false avoids VCS errors when the container lacks git
+cmd = "go build -trimpath -buildvcs=false -o ./tmp/app ./cmd/api"
+bin = "./tmp/app"
 
 # File watching rules
 include_ext = ["go", "tpl", "tmpl", "html"]
@@ -19,6 +19,7 @@ exclude_dir = [
   "docs",
   "scripts",
   "dist",
+  "internal/tests",
 ]
 exclude_regex = ["_test\\.go$"]
 follow_symlink = true

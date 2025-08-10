@@ -15,13 +15,13 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: ${DB_USER:-appsechub}
+      POSTGRES_USER: ${DB_USER:-gostartkit}
       POSTGRES_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
-      POSTGRES_DB: ${DB_NAME:-appsechub}
+      POSTGRES_DB: ${DB_NAME:-gostartkit}
     volumes:
       - db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-appsechub} -d $${POSTGRES_DB:-appsechub}"]
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER:-gostartkit} -d $${POSTGRES_DB:-gostartkit}"]
       interval: 5s
       timeout: 3s
       retries: 10
@@ -30,7 +30,7 @@ services:
       - backend
 
   app:
-    image: appsechub:latest
+    image: gostartkit:latest
     build:
       context: .
       dockerfile: build/Dockerfile
@@ -49,9 +49,9 @@ services:
       HTTP_SECURITY_HEADERS: ${HTTP_SECURITY_HEADERS:-true}
       DB_HOST: db
       DB_PORT: ${DB_PORT:-5432}
-      DB_USER: ${DB_USER:-appsechub}
+      DB_USER: ${DB_USER:-gostartkit}
       DB_PASSWORD: ${DB_PASSWORD:?set DB_PASSWORD in .env}
-      DB_NAME: ${DB_NAME:-appsechub}
+      DB_NAME: ${DB_NAME:-gostartkit}
       DB_SSLMODE: ${DB_SSLMODE:-disable}
       MIGRATIONS_PATH: /app/migrations
       JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET in .env}

@@ -16,7 +16,7 @@ COPY . .
 
 # Build binary with optimizations (static)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
-    go build -trimpath -ldflags="-s -w" -o /app/bin/appsechub ./cmd/api
+    go build -trimpath -ldflags="-s -w" -o /app/bin/app ./cmd/api
 
 # ----- Stage 2: Minimal runtime -----
 # Distroless static (nonroot) for tiny, secure image
@@ -29,7 +29,7 @@ COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 COPY --from=builder /usr/share/zoneinfo /usr/share/zoneinfo
 
 ## Copy binary and migrations
-COPY --from=builder /app/bin/appsechub /app/appsechub
+COPY --from=builder /app/bin/app /app/app
 COPY --from=builder /app/migrations /app/migrations
 
 # Set working directory
@@ -39,4 +39,4 @@ WORKDIR /app
 EXPOSE 8080
 
 # Run the binary
-CMD ["/app/appsechub"]
+CMD ["/app/app"]

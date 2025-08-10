@@ -2,15 +2,15 @@ services:
   db:
     image: postgres:16-alpine
     environment:
-      POSTGRES_USER: appsechub
+      POSTGRES_USER: gostartkit
       POSTGRES_PASSWORD: devpassword
-      POSTGRES_DB: appsechub
+      POSTGRES_DB: gostartkit
     ports:
       - "5432:5432"
     volumes:
       - dev_db_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U appsechub -d appsechub"]
+      test: ["CMD-SHELL", "pg_isready -U gostartkit -d gostartkit"]
       interval: 3s
       timeout: 2s
       retries: 20
@@ -48,9 +48,9 @@ services:
       CGO_ENABLED: 0
       DB_HOST: db
       DB_PORT: 5432
-      DB_USER: appsechub
+      DB_USER: gostartkit
       DB_PASSWORD: devpassword
-      DB_NAME: appsechub
+      DB_NAME: gostartkit
       DB_SSLMODE: disable
       MIGRATIONS_PATH: /app/migrations
       JWT_SECRET: change-me-in-dev
