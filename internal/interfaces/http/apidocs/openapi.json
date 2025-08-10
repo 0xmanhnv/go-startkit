@@ -2,7 +2,7 @@
   "openapi": "3.0.3",
   "info": {
     "title": "Go StartKit API",
-    "version": "0.1.0",
+    "version": "1.0.0",
     "description": "Go StartKit API. Envelope: { data | error | meta }. Error.code is a stable, machine-readable string."
   },
   "servers": [ { "url": "/" } ],
