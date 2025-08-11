@@ -1,4 +1,4 @@
-# Contributing to Go StartKit
+# Contributing to AppSecHub
 
 Thanks for your interest in contributing! We welcome issues, docs, and code.
 

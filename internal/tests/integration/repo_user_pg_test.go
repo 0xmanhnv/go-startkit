@@ -21,9 +21,9 @@ func TestPostgres_UserRepository_CRUD(t *testing.T) {
 
 	host := getenvOr("DB_HOST", "localhost")
 	port := getenvOr("DB_PORT", "5432")
-	user := getenvOr("DB_USER", "gostartkit")
+	user := getenvOr("DB_USER", "appsechub")
 	pass := getenvOr("DB_PASSWORD", "devpassword")
-	name := getenvOr("DB_NAME", "gostartkit")
+	name := getenvOr("DB_NAME", "appsechub")
 	ssl := getenvOr("DB_SSLMODE", "disable")
 
 	dsn := infdb.BuildPostgresDSN(host, port, user, pass, name, ssl)
