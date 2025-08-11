@@ -1,7 +1,7 @@
 package main
 
 import (
-	"database/sql"
+	"context"
 	"time"
 
 	"appsechub/internal/application/usecase/userusecase"
@@ -19,30 +19,28 @@ import (
 	"appsechub/pkg/rbac"
 
 	"github.com/gin-gonic/gin"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// initPostgresAndMigrate builds the DSN, runs migrations, and returns a live *sql.DB.
-func initPostgresAndMigrate(cfg *config.Config) (*sql.DB, error) {
-	dsn := infdb.BuildPostgresDSN(cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.Name, cfg.DB.SSLMode)
-	infdb.RunMigrations(dsn, cfg.MigrationsPath)
-	db, err := pgstore.NewPostgresConnection(dsn)
+// initPostgresAndMigrate builds the URL, runs migrations, and returns a live *pgxpool.Pool.
+func initPostgresAndMigrate(cfg *config.Config) (*pgxpool.Pool, error) {
+	url := infdb.BuildPostgresURL(cfg.DB.Host, cfg.DB.Port, cfg.DB.User, cfg.DB.Password, cfg.DB.Name, cfg.DB.SSLMode)
+	infdb.RunMigrations(url, cfg.MigrationsPath)
+	// Create pgx pool
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	pool, err := pgstore.NewPGXPool(ctx, url, cfg.PGXMaxConns, cfg.PGXMaxConnLifetime, cfg.PGXMaxConnIdleTime)
 	if err != nil {
 		return nil, err
 	}
-	// Override pool settings from config
-	if cfg.DB.MaxOpenConns > 0 {
-		db.SetMaxOpenConns(cfg.DB.MaxOpenConns)
+	// Optional extra tunables not in constructor (pgxpool.Config supports these via env but we expose minimal set)
+	if cfg.PGXMinConns > 0 {
+		pool.Config().MinConns = int32(cfg.PGXMinConns)
 	}
-	if cfg.DB.MaxIdleConns > 0 {
-		db.SetMaxIdleConns(cfg.DB.MaxIdleConns)
+	if cfg.PGXHealthCheckPeriodSec > 0 {
+		pool.Config().HealthCheckPeriod = time.Duration(cfg.PGXHealthCheckPeriodSec) * time.Second
 	}
-	if cfg.DB.ConnMaxLifetime > 0 {
-		db.SetConnMaxLifetime(time.Duration(cfg.DB.ConnMaxLifetime) * time.Second)
-	}
-	if cfg.DB.ConnMaxIdleTime > 0 {
-		db.SetConnMaxIdleTime(time.Duration(cfg.DB.ConnMaxIdleTime) * time.Second)
-	}
-	return db, nil
+	return pool, nil
 }
 
 // initJWTService constructs the JWT service and applies optional hardening metadata.
@@ -57,8 +55,8 @@ func initJWTService(cfg *config.Config) security.JWTService {
 }
 
 // buildUserComponents constructs repository, hasher, aggregated usecases and returns the HTTP handler.
-func buildUserComponents(db *sql.DB, jwtSvc security.JWTService, cfg *config.Config) (*handler.UserHandler, *pgstore.UserRepository, userusecase.PasswordHasher) {
-	userRepo := pgstore.NewUserRepository(db)
+func buildUserComponents(pool *pgxpool.Pool, jwtSvc security.JWTService, cfg *config.Config) (*handler.UserHandler, *pgstore.UserRepository, userusecase.PasswordHasher) {
+	userRepo := pgstore.NewUserRepository(pool)
 	hasher := security.NewBcryptHasher(cfg.Security.BcryptCost)
 	var uc userusecase.UserUsecases
 	if cfg.RedisAddr != "" && cfg.Security.RefreshEnabled {
@@ -82,7 +80,7 @@ func loadRBACPolicy(cfg *config.Config) {
 }
 
 // buildRouter constructs the Gin engine with middlewares, routes and readiness check.
-func buildRouter(cfg *config.Config, userHandler *handler.UserHandler, jwtSvc security.JWTService, db *sql.DB) *gin.Engine {
+func buildRouter(cfg *config.Config, userHandler *handler.UserHandler, jwtSvc security.JWTService, pool *pgxpool.Pool) *gin.Engine {
 	// Build a validator function to decouple middleware from concrete JWT service
 	validator := func(token string) (string, string, error) {
 		claims, err := jwtSvc.ValidateToken(token)
@@ -92,7 +90,7 @@ func buildRouter(cfg *config.Config, userHandler *handler.UserHandler, jwtSvc se
 		return claims.Subject, claims.Role, nil
 	}
 	router := httpiface.NewRouter(userHandler, cfg, middleware.JWTAuth(validator))
-	ping := infdb.NewDBPingCheck(db)
+	ping := infdb.NewDBPingCheck(pool)
 	httpiface.AddReadiness(router, ping)
 	// Optional: swap in Redis-based rate limiter for login when Redis configured
 	if cfg.RedisAddr != "" {

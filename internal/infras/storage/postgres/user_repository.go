@@ -1,127 +1,137 @@
 package postgres
 
 import (
-    "context"
-    "database/sql"
-    "errors"
-    "time"
+	"context"
+	"errors"
+	"time"
 
-    domuser "appsechub/internal/domain/user"
-    "github.com/google/uuid"
-    pq "github.com/lib/pq"
+	domuser "appsechub/internal/domain/user"
+	pstore "appsechub/internal/infras/storage/postgres/sqlc"
+
+	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 type UserRepository struct {
-    db *sql.DB
+	pool *pgxpool.Pool
+	q    *pstore.Queries
 }
 
-func NewUserRepository(db *sql.DB) *UserRepository {
-    return &UserRepository{db: db}
+func NewUserRepository(pool *pgxpool.Pool) *UserRepository {
+	return &UserRepository{pool: pool, q: pstore.New(pool)}
 }
 
 func (r *UserRepository) Save(ctx context.Context, u *domuser.User) error {
-    cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-    defer cancel()
-    _, err := r.db.ExecContext(
-        cctx,
-        `INSERT INTO users (id, first_name, last_name, email, password, role, created_at, updated_at)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8)`,
-        u.ID, u.FirstName, u.LastName, u.Email.String(), u.Password, string(u.Role), u.CreatedAt, u.UpdatedAt,
-    )
-    if err != nil {
-        var pgErr *pq.Error
-        if errors.As(err, &pgErr) {
-            if pgErr.Code == "23505" { // unique_violation
-                return domuser.ErrEmailAlreadyExists
-            }
-        }
-        return err
-    }
-    return nil
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	err := r.q.CreateUser(cctx, pstore.CreateUserParams{
+		ID:        u.ID,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Email:     u.Email.String(),
+		Password:  u.Password,
+		Role:      string(u.Role),
+		CreatedAt: u.CreatedAt,
+		UpdatedAt: u.UpdatedAt,
+	})
+	if err != nil {
+		var pgErr *pgconn.PgError
+		if errors.As(err, &pgErr) {
+			if pgErr.Code == "23505" { // unique_violation
+				return domuser.ErrEmailAlreadyExists
+			}
+		}
+		return err
+	}
+	return nil
 }
 
 func (r *UserRepository) GetByID(ctx context.Context, id uuid.UUID) (*domuser.User, error) {
-    cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-    defer cancel()
-    row := r.db.QueryRowContext(cctx, `SELECT id, first_name, last_name, email, password, role, created_at, updated_at FROM users WHERE id=$1`, id)
-    u, err := scanUser(row)
-    if err != nil {
-        if errors.Is(err, sql.ErrNoRows) {
-            return nil, domuser.ErrUserNotFound
-        }
-        return nil, err
-    }
-    return u, nil
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	row, err := r.q.GetUserByID(cctx, id)
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domuser.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &domuser.User{
+		ID:        row.ID,
+		FirstName: row.FirstName,
+		LastName:  row.LastName,
+		Email:     domuser.Email(row.Email),
+		Password:  row.Password,
+		Role:      domuser.Role(row.Role),
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}, nil
 }
 
 func (r *UserRepository) GetByEmail(ctx context.Context, email domuser.Email) (*domuser.User, error) {
-    cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-    defer cancel()
-    row := r.db.QueryRowContext(cctx, `SELECT id, first_name, last_name, email, password, role, created_at, updated_at FROM users WHERE email=$1`, email.String())
-    u, err := scanUser(row)
-    if err != nil {
-        if errors.Is(err, sql.ErrNoRows) {
-            return nil, domuser.ErrUserNotFound
-        }
-        return nil, err
-    }
-    return u, nil
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	row, err := r.q.GetUserByEmail(cctx, email.String())
+	if err != nil {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil, domuser.ErrUserNotFound
+		}
+		return nil, err
+	}
+	return &domuser.User{
+		ID:        row.ID,
+		FirstName: row.FirstName,
+		LastName:  row.LastName,
+		Email:     domuser.Email(row.Email),
+		Password:  row.Password,
+		Role:      domuser.Role(row.Role),
+		CreatedAt: row.CreatedAt,
+		UpdatedAt: row.UpdatedAt,
+	}, nil
 }
 
 func (r *UserRepository) GetAll(ctx context.Context) ([]*domuser.User, error) {
-    cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
-    defer cancel()
-    rows, err := r.db.QueryContext(cctx, `SELECT id, first_name, last_name, email, password, role, created_at, updated_at FROM users ORDER BY created_at DESC`)
-    if err != nil {
-        return nil, err
-    }
-    defer rows.Close()
-    var list []*domuser.User
-    for rows.Next() {
-        var u domuser.User
-        var email string
-        var role string
-        if err := rows.Scan(&u.ID, &u.FirstName, &u.LastName, &email, &u.Password, &role, &u.CreatedAt, &u.UpdatedAt); err != nil {
-            return nil, err
-        }
-        u.Email = domuser.Email(email)
-        u.Role = domuser.Role(role)
-        list = append(list, &u)
-    }
-    return list, rows.Err()
+	cctx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	rows, err := r.q.ListUsers(cctx)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*domuser.User, 0, len(rows))
+	for _, row := range rows {
+		u := &domuser.User{
+			ID:        row.ID,
+			FirstName: row.FirstName,
+			LastName:  row.LastName,
+			Email:     domuser.Email(row.Email),
+			Password:  row.Password,
+			Role:      domuser.Role(row.Role),
+			CreatedAt: row.CreatedAt,
+			UpdatedAt: row.UpdatedAt,
+		}
+		out = append(out, u)
+	}
+	return out, nil
 }
 
 func (r *UserRepository) Update(ctx context.Context, u *domuser.User) error {
-    cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-    defer cancel()
-    _, err := r.db.ExecContext(
-        cctx,
-        `UPDATE users SET first_name=$2,last_name=$3,email=$4,password=$5,role=$6,updated_at=$7 WHERE id=$1`,
-        u.ID, u.FirstName, u.LastName, u.Email.String(), u.Password, string(u.Role), u.UpdatedAt,
-    )
-    return err
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	return r.q.UpdateUser(cctx, pstore.UpdateUserParams{
+		ID:        u.ID,
+		FirstName: u.FirstName,
+		LastName:  u.LastName,
+		Email:     u.Email.String(),
+		Password:  u.Password,
+		Role:      string(u.Role),
+		UpdatedAt: u.UpdatedAt, // kept for explicitness; DB trigger also updates this
+	})
 }
 
 func (r *UserRepository) Delete(ctx context.Context, id uuid.UUID) error {
-    cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
-    defer cancel()
-    _, err := r.db.ExecContext(cctx, `DELETE FROM users WHERE id=$1`, id)
-    return err
+	cctx, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	return r.q.DeleteUser(cctx, id)
 }
-
-func scanUser(row rowScanner) (*domuser.User, error) {
-    var u domuser.User
-    var email string
-    var role string
-    if err := row.Scan(&u.ID, &u.FirstName, &u.LastName, &email, &u.Password, &role, &u.CreatedAt, &u.UpdatedAt); err != nil {
-        return nil, err
-    }
-    u.Email = domuser.Email(email)
-    u.Role = domuser.Role(role)
-    return &u, nil
-}
-
-type rowScanner interface {
-    Scan(dest ...any) error
-}
-

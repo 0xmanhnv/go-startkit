@@ -12,7 +12,7 @@ import (
 )
 
 // seedInitialUser ensures an initial user exists using values from config.Seed.
-func seedInitialUser(sqlDB any, repo *pgstore.UserRepository, hasher userusecase.PasswordHasher, cfg *config.Config) error {
+func seedInitialUser(_ any, repo *pgstore.UserRepository, hasher userusecase.PasswordHasher, cfg *config.Config) error {
 	// Validate inputs
 	if cfg.Seed.Email == "" || cfg.Seed.Password == "" {
 		logger.L().Warn("seed_skipped_missing_env")

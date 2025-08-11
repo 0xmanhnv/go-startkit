@@ -1,25 +1,39 @@
 package postgres
 
 import (
-	"database/sql"
+	"context"
 	"time"
 
-	_ "github.com/lib/pq"
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-// NewPostgresConnection opens a new sql.DB using a DSN string.
-func NewPostgresConnection(dsn string) (*sql.DB, error) {
-	db, err := sql.Open("postgres", dsn)
+// NewPGXPool creates a new pgx connection pool from a PostgreSQL URL.
+// Optional tunables can be passed (non-positive values keep defaults).
+func NewPGXPool(ctx context.Context, url string, maxConns, maxLifetimeSec, maxIdleTimeSec int) (*pgxpool.Pool, error) {
+	cfg, err := pgxpool.ParseConfig(url)
 	if err != nil {
 		return nil, err
 	}
-	// Apply sensible defaults (can be overridden by caller if needed)
-	db.SetMaxOpenConns(25)
-	db.SetMaxIdleConns(25)
-	db.SetConnMaxLifetime(15 * time.Minute)
-	db.SetConnMaxIdleTime(5 * time.Minute)
-	if err := db.Ping(); err != nil {
+	// Apply tunables if provided
+	if maxConns > 0 {
+		cfg.MaxConns = int32(maxConns)
+	}
+	if maxLifetimeSec > 0 {
+		cfg.MaxConnLifetime = time.Duration(maxLifetimeSec) * time.Second
+	}
+	if maxIdleTimeSec > 0 {
+		cfg.MaxConnIdleTime = time.Duration(maxIdleTimeSec) * time.Second
+	}
+	// Optional advanced tunables via env: health check period, min conns can be set by caller modifying cfg before here if needed.
+	pool, err := pgxpool.NewWithConfig(ctx, cfg)
+	if err != nil {
 		return nil, err
 	}
-	return db, nil
+	ctxPing, cancel := context.WithTimeout(ctx, 3*time.Second)
+	defer cancel()
+	if err := pool.Ping(ctxPing); err != nil {
+		pool.Close()
+		return nil, err
+	}
+	return pool, nil
 }
