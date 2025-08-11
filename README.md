@@ -74,7 +74,7 @@ Handler returns HTTP Response
    - `docker compose -f docker-compose.dev.yml up`
    - Source code is bind-mounted; the app rebuilds automatically on changes.
 2) Local (Go and Air installed):
-   - Install Air: `go install github.com/cosmtrek/air@latest`
+   - Install Air: `go install github.com/air-verse/air@latest`
    - Run: `air -c ./.air.toml`
 
 ### DevEx shortcuts
@@ -366,10 +366,8 @@ cmd/api          → all (composition root only)
 
 ## Documentation
 - Codebase review & pending fixes: `docs/review.md`
-- Best-practice starter checklist: `docs/starter-kit-checklist.md`
-  - Step-by-step roadmap: `docs/step-by-step.md`
-  - RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
-  - Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
+- RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
+- Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
 
 ## Rename project/module & keeping up-to-date
 If you start a new project from this starter kit, or want to pull updates later, use the script below.
