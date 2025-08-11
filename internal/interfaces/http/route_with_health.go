@@ -5,8 +5,8 @@ import (
 	"net/http"
 	"time"
 
-	"gostartkit/internal/config"
-	"gostartkit/internal/interfaces/http/handler"
+	"appsechub/internal/config"
+	"appsechub/internal/interfaces/http/handler"
 
 	"github.com/gin-gonic/gin"
 )

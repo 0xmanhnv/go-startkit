@@ -1,4 +1,4 @@
-module gostartkit
+module appsechub
 
 go 1.24
 

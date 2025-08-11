@@ -3,8 +3,8 @@ package userusecase
 import (
 	"context"
 
-	"gostartkit/internal/application/dto"
-	"gostartkit/internal/domain/user"
+	"appsechub/internal/application/dto"
+	"appsechub/internal/domain/user"
 )
 
 type CreateUserUseCase struct {

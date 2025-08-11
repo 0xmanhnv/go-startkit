@@ -8,7 +8,7 @@ import (
 	"testing"
 	"time"
 
-	auth "gostartkit/internal/infras/auth"
+	auth "appsechub/internal/infras/auth"
 )
 
 func TestRedisRefreshStore_IssueValidateRevoke(t *testing.T) {

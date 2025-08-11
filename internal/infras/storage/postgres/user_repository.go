@@ -6,7 +6,7 @@ import (
     "errors"
     "time"
 
-    domuser "gostartkit/internal/domain/user"
+    domuser "appsechub/internal/domain/user"
     "github.com/google/uuid"
     pq "github.com/lib/pq"
 )

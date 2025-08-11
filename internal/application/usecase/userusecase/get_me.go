@@ -3,8 +3,8 @@ package userusecase
 import (
     "context"
 
-    "gostartkit/internal/application/dto"
-    domuser "gostartkit/internal/domain/user"
+    "appsechub/internal/application/dto"
+    domuser "appsechub/internal/domain/user"
     "github.com/google/uuid"
 )
 

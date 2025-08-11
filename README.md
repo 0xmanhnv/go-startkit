@@ -174,7 +174,7 @@ When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
 
 ## Project layout
 ```
-GoStartKit/
+gostartkit/
 ├─ cmd/
 │  └─ api/                  # Composition root (main, bootstrap, wiring)
 ├─ internal/

@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	domuser "gostartkit/internal/domain/user"
-	infdb "gostartkit/internal/infras/db"
-	pgstore "gostartkit/internal/infras/storage/postgres"
+	domuser "appsechub/internal/domain/user"
+	infdb "appsechub/internal/infras/db"
+	pgstore "appsechub/internal/infras/storage/postgres"
 )
 
 func TestPostgres_UserRepository_CRUD(t *testing.T) {

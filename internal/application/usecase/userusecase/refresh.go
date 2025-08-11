@@ -4,10 +4,10 @@ import (
 	"context"
 	"errors"
 
-	"gostartkit/internal/application/apperr"
-	"gostartkit/internal/application/dto"
-	"gostartkit/internal/application/ports"
-	"gostartkit/internal/domain/user"
+	"appsechub/internal/application/apperr"
+	"appsechub/internal/application/dto"
+	"appsechub/internal/application/ports"
+	"appsechub/internal/domain/user"
 
 	"github.com/google/uuid"
 )
