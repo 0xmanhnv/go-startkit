@@ -5,9 +5,9 @@ set -euo pipefail
 COMPOSE_FILE="docker-compose.test.yml"
 DB_HOST_DEFAULT="localhost"
 DB_PORT_DEFAULT="55432"
-DB_USER_DEFAULT="appsechub"
+DB_USER_DEFAULT="gostartkit"
 DB_PASSWORD_DEFAULT="devpassword"
-DB_NAME_DEFAULT="appsechub"
+DB_NAME_DEFAULT="gostartkit"
 REDIS_ADDR_DEFAULT="localhost:56379"
 
 KEEP_CONTAINERS=false

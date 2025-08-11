@@ -5,9 +5,9 @@ import (
 	"testing"
 	"time"
 
-	"appsechub/internal/application/dto"
-	"appsechub/internal/application/ports"
-	domuser "appsechub/internal/domain/user"
+	"gostartkit/internal/application/dto"
+	"gostartkit/internal/application/ports"
+	domuser "gostartkit/internal/domain/user"
 
 	"github.com/google/uuid"
 )

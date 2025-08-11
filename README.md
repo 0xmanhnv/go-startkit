@@ -1,6 +1,6 @@
-# AppSecHub
+# Go Startkit
 
-AppSecHub is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
+Go Startkit is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
 
 ## Architecture diagrams
 - Project layout (directories): see section "Project layout"
@@ -107,7 +107,7 @@ Default API base URL: `http://localhost:8080`
 - Or manually with docker compose then run tests:
   ```bash
   docker compose -f docker-compose.test.yml up -d
-  DB_HOST=localhost DB_PORT=55432 DB_USER=appsechub DB_PASSWORD=devpassword DB_NAME=appsechub \
+  DB_HOST=localhost DB_PORT=55432 DB_USER=gostartkit DB_PASSWORD=devpassword DB_NAME=gostartkit \
   REDIS_ADDR=localhost:56379 \
   go test -tags=integration ./internal/tests/integration -v
   ```
@@ -189,7 +189,7 @@ When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
 
 ## Project layout
 ```
-appsechub/
+gostartkit/
 ├─ cmd/
 │  └─ api/                  # Composition root (main, bootstrap, wiring)
 ├─ internal/
@@ -381,7 +381,7 @@ If you start a new project from this starter kit, or want to pull updates later,
 1) Initialize a new project (template or fork)
 ```bash
 # Change Go module path and update imports once
-./scripts/rename_project.sh github.com/you/yourapp appsechub
+./scripts/rename_project.sh github.com/you/yourapp gostartkit
 go mod tidy && go build ./...
 ```
 
@@ -392,16 +392,16 @@ git fetch upstream
 git merge upstream/dev   # or rebase depending on your workflow
 
 # If new files from upstream reintroduce old import prefix, run the script again
-./scripts/rename_project.sh github.com/you/yourapp appsechub
+./scripts/rename_project.sh github.com/you/yourapp gostartkit
 go mod tidy && go build ./...
 ```
 
 3) Optional but recommended – align names across configs/docs:
-- Docker image/name and references in `docker-compose*.yml` (e.g., `appsechub` → your image name)
-- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` (e.g., "AppSecHub API")
+- Docker image/name and references in `docker-compose*.yml` (e.g., `gostartkit` → your image name)
+- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` (e.g., "Go Startkit API")
 - README/CHANGELOG headings and references
 - Default JWT metadata in `internal/config/config.go` (issuer/audience: defaults are `app`/`app-clients`)
-- Dev DB name/user in compose files (defaults currently `appsechub`)
+- Dev DB name/user in compose files (defaults currently `gostartkit`)
 
 4) If publishing the repo, ensure the module path matches the canonical VCS path (e.g., GitHub URL) to avoid `go get` issues.
 
