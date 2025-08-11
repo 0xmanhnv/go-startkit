@@ -4,7 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 
-	"appsechub/pkg/logger"
+	"gostartkit/pkg/logger"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"

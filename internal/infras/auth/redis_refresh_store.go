@@ -7,7 +7,7 @@ import (
 	"errors"
 	"time"
 
-	"appsechub/internal/application/ports"
+	"gostartkit/internal/application/ports"
 
 	"github.com/redis/go-redis/v9"
 )

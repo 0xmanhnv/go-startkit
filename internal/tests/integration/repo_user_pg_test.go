@@ -9,9 +9,9 @@ import (
 	"testing"
 	"time"
 
-	domuser "appsechub/internal/domain/user"
-	infdb "appsechub/internal/infras/db"
-	pgstore "appsechub/internal/infras/storage/postgres"
+	domuser "gostartkit/internal/domain/user"
+	infdb "gostartkit/internal/infras/db"
+	pgstore "gostartkit/internal/infras/storage/postgres"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 )
@@ -23,9 +23,9 @@ func TestPostgres_UserRepository_CRUD(t *testing.T) {
 
 	host := getenvOr("DB_HOST", "localhost")
 	port := getenvOr("DB_PORT", "5432")
-	user := getenvOr("DB_USER", "appsechub")
+	user := getenvOr("DB_USER", "gostartkit")
 	pass := getenvOr("DB_PASSWORD", "devpassword")
-	name := getenvOr("DB_NAME", "appsechub")
+	name := getenvOr("DB_NAME", "gostartkit")
 	ssl := getenvOr("DB_SSLMODE", "disable")
 
 	url := infdb.BuildPostgresURL(host, port, user, pass, name, ssl)

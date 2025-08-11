@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	domuser "appsechub/internal/domain/user"
+	domuser "gostartkit/internal/domain/user"
 
 	"github.com/google/uuid"
 )

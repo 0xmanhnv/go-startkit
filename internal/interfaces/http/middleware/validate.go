@@ -3,7 +3,7 @@ package middleware
 import (
 	"net/http"
 
-	"appsechub/internal/interfaces/http/validation"
+	"gostartkit/internal/interfaces/http/validation"
 
 	"github.com/gin-gonic/gin"
 )

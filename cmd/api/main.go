@@ -8,8 +8,8 @@ import (
 	"syscall"
 	"time"
 
-	"appsechub/internal/config"
-	"appsechub/pkg/logger"
+	"gostartkit/internal/config"
+	"gostartkit/pkg/logger"
 )
 
 func main() {

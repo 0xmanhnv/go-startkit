@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
-	"appsechub/internal/application/apperr"
-	domuser "appsechub/internal/domain/user"
+	"gostartkit/internal/application/apperr"
+	domuser "gostartkit/internal/domain/user"
 )
 
 func TestFromError_Mapping(t *testing.T) {

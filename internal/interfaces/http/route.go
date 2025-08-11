@@ -4,11 +4,11 @@ import (
 	"net/http"
 	"time"
 
-	"appsechub/internal/application/dto"
-	"appsechub/internal/config"
-	"appsechub/internal/interfaces/http/handler"
-	"appsechub/internal/interfaces/http/middleware"
-	"appsechub/pkg/logger"
+	"gostartkit/internal/application/dto"
+	"gostartkit/internal/config"
+	"gostartkit/internal/interfaces/http/handler"
+	"gostartkit/internal/interfaces/http/middleware"
+	"gostartkit/pkg/logger"
 
 	"github.com/gin-contrib/cors"
 	"github.com/gin-gonic/gin"

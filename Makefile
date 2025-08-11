@@ -20,7 +20,7 @@ test-int-all: sqlc-gen
 	@echo "Starting compose for integration tests..."
 	docker compose -f docker-compose.test.yml up -d
 	@echo "Running integration tests (DB+Redis)..."
-	DB_HOST?=localhost DB_PORT?=55432 DB_USER?=appsechub DB_PASSWORD?=devpassword DB_NAME?=appsechub REDIS_ADDR?=localhost:56379 \
+	DB_HOST?=localhost DB_PORT?=55432 DB_USER?=gostartkit DB_PASSWORD?=devpassword DB_NAME?=gostartkit REDIS_ADDR?=localhost:56379 \
 	go test -tags=integration ./internal/tests/integration -v || RET=$$?; \
 	printf "\nStopping compose...\n"; docker compose -f docker-compose.test.yml down -v; \
 	exit $${RET:-0}

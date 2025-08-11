@@ -1,4 +1,4 @@
-## AppSecHub — Pending (High Priority)
+## Go Startkit — Pending (High Priority)
 
 - Observability
   - Expose `/metrics` (Prometheus)
@@ -19,7 +19,7 @@
   - Rotate secrets periodically; inject at runtime (ENV/volumes)
   - Keep `/swagger` disabled in prod (already enforced by ENV)
 
-## AppSecHub — Codebase Review (Initial)
+## Go Startkit — Codebase Review (Initial)
 
 ### Current status (updated)
 - Completed:
@@ -95,7 +95,7 @@
      - Called `h.Usecase.Login.Execute(...)` but `Login` usecase was missing.
 
 5) Incorrect auth service import (historical)
-   - `internal/application/service/auth_service.go` imported `appsechub/internal/domain` (should be `internal/domain/user`).
+   - `internal/application/service/auth_service.go` imported `gostartkit/internal/domain` (should be `internal/domain/user`).
 
 6) Migrations & path (historical)
    - `migrations/` empty would cause `m.Up()` to fail; ensure valid files and correct path.
@@ -253,9 +253,9 @@
   - `HTTP_PORT=8080`
   - `HTTP_CORS_ALLOWED_ORIGINS=*`
   - `HTTP_SECURITY_HEADERS=false`
-  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=appsechub` `DB_PASSWORD=devpassword` `DB_NAME=appsechub` `DB_SSLMODE=disable`
+  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=gostartkit` `DB_PASSWORD=devpassword` `DB_NAME=gostartkit` `DB_SSLMODE=disable`
   - `MIGRATIONS_PATH=migrations`
-  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=appsechub` `JWT_AUDIENCE=appsechub-clients` `JWT_LEEWAY_SEC=30`
+  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=gostartkit` `JWT_AUDIENCE=gostartkit-clients` `JWT_LEEWAY_SEC=30`
   - `SEED_ENABLE=true` and `SEED_*` for dev admin
 
 12) Compose dev/prod — DONE
@@ -271,7 +271,7 @@
   - Added `registerAuthRoutes` covering `/register`, `/login` (with optional rate limit), and protected `/me`, `/change-password`.
   - Updated `registerAPIV1Routes` to call `registerAuthRoutes`.
 
-## AppSecHub — Pending (High Priority)
+## Go Startkit — Pending (High Priority)
 
 - Observability
   - Expose `/metrics` (Prometheus)
@@ -292,7 +292,7 @@
   - Rotate secrets periodically; inject at runtime (ENV/volumes)
   - Keep `/swagger` disabled in prod (already enforced by ENV)
 
-## AppSecHub — Codebase Review (Initial)
+## Go Startkit — Codebase Review (Initial)
 
 ### Current status (updated)
 - Completed:
@@ -421,9 +421,9 @@
   - `HTTP_PORT=8080`
   - `HTTP_CORS_ALLOWED_ORIGINS=*`
   - `HTTP_SECURITY_HEADERS=false`
-  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=appsechub` `DB_PASSWORD=devpassword` `DB_NAME=appsechub` `DB_SSLMODE=disable`
+  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=gostartkit` `DB_PASSWORD=devpassword` `DB_NAME=gostartkit` `DB_SSLMODE=disable`
   - `MIGRATIONS_PATH=migrations`
-  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=appsechub` `JWT_AUDIENCE=appsechub-clients` `JWT_LEEWAY_SEC=30`
+  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=gostartkit` `JWT_AUDIENCE=gostartkit-clients` `JWT_LEEWAY_SEC=30`
   - `SEED_ENABLE=true` và bộ `SEED_*` cho admin dev
 
 ~~12) Compose dev/prod~~ (ĐÃ THỰC HIỆN)

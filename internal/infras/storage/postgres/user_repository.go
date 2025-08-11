@@ -5,8 +5,8 @@ import (
 	"errors"
 	"time"
 
-	domuser "appsechub/internal/domain/user"
-	pstore "appsechub/internal/infras/storage/postgres/sqlc"
+	domuser "gostartkit/internal/domain/user"
+	pstore "gostartkit/internal/infras/storage/postgres/sqlc"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
