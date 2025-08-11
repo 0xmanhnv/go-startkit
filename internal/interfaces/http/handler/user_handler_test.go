@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"context"
-	"gostartkit/internal/application/dto"
-	"gostartkit/internal/application/usecase/userusecase"
+	"appsechub/internal/application/dto"
+	"appsechub/internal/application/usecase/userusecase"
 
 	"github.com/gin-gonic/gin"
 )

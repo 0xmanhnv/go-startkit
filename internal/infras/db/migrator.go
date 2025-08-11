@@ -4,16 +4,18 @@ import (
 	"database/sql"
 	"fmt"
 
-	"gostartkit/pkg/logger"
+	"appsechub/pkg/logger"
 
 	"github.com/golang-migrate/migrate/v4"
 	"github.com/golang-migrate/migrate/v4/database/postgres"
 	_ "github.com/golang-migrate/migrate/v4/source/file"
-	_ "github.com/lib/pq"
+	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// RunMigrations runs up migrations using a database/sql connection via the pgx stdlib driver.
+// dsn should be a PostgreSQL URL (e.g., from BuildPostgresURL).
 func RunMigrations(dsn string, migrationsPath string) {
-	db, err := sql.Open("postgres", dsn)
+	db, err := sql.Open("pgx", dsn)
 	if err != nil {
 		logger.L().Error("db_connect_failed", "error", err)
 		panic(err)

@@ -3,9 +3,9 @@ package userusecase
 import (
 	"context"
 
-	"gostartkit/internal/application/dto"
-	"gostartkit/internal/application/ports"
-	"gostartkit/internal/domain/user"
+	"appsechub/internal/application/dto"
+	"appsechub/internal/application/ports"
+	"appsechub/internal/domain/user"
 )
 
 // UserUsecases defines the application-facing interface for user-related operations.

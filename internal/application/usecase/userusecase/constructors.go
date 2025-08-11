@@ -1,8 +1,8 @@
 package userusecase
 
 import (
-	"gostartkit/internal/application/ports"
-	"gostartkit/internal/domain/user"
+	"appsechub/internal/application/ports"
+	"appsechub/internal/domain/user"
 )
 
 func NewCreateUserUseCase(repo user.Repository, hasher PasswordHasher) *CreateUserUseCase {

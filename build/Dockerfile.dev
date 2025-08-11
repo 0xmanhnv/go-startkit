@@ -1,0 +1,24 @@
+FROM golang:1.24.3-alpine
+
+ENV GOPATH=/go
+ENV PATH=/usr/local/go/bin:/go/bin:$PATH
+# (optional) enable CGO if needed: ENV CGO_ENABLED=0
+
+RUN apk add --no-cache git ca-certificates tzdata curl bash build-base
+
+WORKDIR /app
+COPY go.mod go.sum ./
+RUN go mod download
+
+RUN go install github.com/air-verse/air@v1.52.3 \
+ && go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0
+
+# non-root user; map UID/GID from host for sane file permissions with bind mounts
+ARG UID=1000
+ARG GID=1000
+RUN addgroup -g $GID dev && adduser -D -u $UID -G dev dev \
+ && mkdir -p /app/tmp && chown -R dev:dev /app /go
+USER dev
+
+EXPOSE 8080
+CMD ["sh","-lc","/go/bin/sqlc generate && /go/bin/air -c ./.air.toml"]

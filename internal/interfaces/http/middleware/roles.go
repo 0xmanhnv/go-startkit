@@ -1,8 +1,8 @@
 package middleware
 
 import (
-	"gostartkit/pkg/logger"
-	"gostartkit/pkg/rbac"
+	"appsechub/pkg/logger"
+	"appsechub/pkg/rbac"
 	"net/http"
 
 	"github.com/gin-gonic/gin"

@@ -3,8 +3,8 @@ package response
 import (
 	"errors"
 
-	"gostartkit/internal/application/apperr"
-	domuser "gostartkit/internal/domain/user"
+	"appsechub/internal/application/apperr"
+	domuser "appsechub/internal/domain/user"
 )
 
 // FromError maps a domain/application error to HTTP status, code and safe message.

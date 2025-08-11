@@ -76,4 +76,11 @@ type Config struct {
 	RedisAddr     string `env:"REDIS_ADDR"`
 	RedisPassword string `env:"REDIS_PASSWORD"`
 	RedisDB       int    `env:"REDIS_DB" default:"0"`
+
+	// pgxpool tuning (optional). If unset/non-positive, defaults are applied.
+	PGXMaxConns             int `env:"PGX_MAX_CONNS" default:"0"`
+	PGXMinConns             int `env:"PGX_MIN_CONNS" default:"0"`
+	PGXMaxConnLifetime      int `env:"PGX_CONN_MAX_LIFETIME_SEC" default:"0"`
+	PGXMaxConnIdleTime      int `env:"PGX_CONN_MAX_IDLE_TIME_SEC" default:"0"`
+	PGXHealthCheckPeriodSec int `env:"PGX_HEALTH_CHECK_PERIOD_SEC" default:"0"`
 }

@@ -4,15 +4,15 @@ import (
 	"context"
 	"time"
 
-	"gostartkit/internal/application/usecase/userusecase"
-	"gostartkit/internal/config"
-	domuser "gostartkit/internal/domain/user"
-	pgstore "gostartkit/internal/infras/storage/postgres"
-	"gostartkit/pkg/logger"
+	"appsechub/internal/application/usecase/userusecase"
+	"appsechub/internal/config"
+	domuser "appsechub/internal/domain/user"
+	pgstore "appsechub/internal/infras/storage/postgres"
+	"appsechub/pkg/logger"
 )
 
 // seedInitialUser ensures an initial user exists using values from config.Seed.
-func seedInitialUser(sqlDB any, repo *pgstore.UserRepository, hasher userusecase.PasswordHasher, cfg *config.Config) error {
+func seedInitialUser(_ any, repo *pgstore.UserRepository, hasher userusecase.PasswordHasher, cfg *config.Config) error {
 	// Validate inputs
 	if cfg.Seed.Email == "" || cfg.Seed.Password == "" {
 		logger.L().Warn("seed_skipped_missing_env")
