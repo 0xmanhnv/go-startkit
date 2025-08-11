@@ -14,6 +14,10 @@ RUN go mod download
 # Copy source code
 COPY . .
 
+# Install sqlc and generate code (sqlc-generated files are not committed)
+RUN go install github.com/sqlc-dev/sqlc/cmd/sqlc@v1.29.0 && \
+    /go/bin/sqlc generate
+
 # Build binary with optimizations (static)
 RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 \
     go build -trimpath -ldflags="-s -w" -o /app/bin/app ./cmd/api

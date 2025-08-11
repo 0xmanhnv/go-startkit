@@ -5,8 +5,8 @@ set -euo pipefail
 usage() {
   echo "Usage: $0 <new_module_path> [old_module_path]" >&2
   echo "Examples:" >&2
-  echo "  $0 github.com/you/appsechub" >&2
-  echo "  $0 github.com/you/appsechub gostartkit" >&2
+  echo "  $0 github.com/you/gostartkit" >&2
+  echo "  $0 github.com/you/gostartkit gostartkit" >&2
 }
 
 if [[ ! -f go.mod ]]; then

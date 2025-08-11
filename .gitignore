@@ -45,6 +45,10 @@ Thumbs.db
 .env.test
 .env.production
 
+# sqlc generated code (do not commit generated Go files)
+internal/infras/storage/postgres/sqlc/*.go
+!internal/infras/storage/postgres/sqlc/*.sql
+
 # Log files
 *.log
 logs/

@@ -1,6 +1,6 @@
-# Go StartKit
+# Go Startkit
 
-Go StartKit is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
+Go Startkit is a Go starter kit for building HTTP services, following a clear layered architecture (Domain → UseCase → Interface/HTTP → Infrastructure) with foundational security practices (password hashing, JWT, migrations, environment-driven config).
 
 ## Architecture diagrams
 - Project layout (directories): see section "Project layout"
@@ -63,8 +63,8 @@ Handler returns HTTP Response
   - Optional password hashing:
     - `BCRYPT_COST=12` (4–31). Higher = slower = stronger. Tune per env (dev lower for speed, prod higher ~100–250ms/hash target).
   - Optional DB pool tuning:
-    - `DB_MAX_OPEN_CONNS=25`, `DB_MAX_IDLE_CONNS=25`
-    - `DB_CONN_MAX_LIFETIME_SEC=900`, `DB_CONN_MAX_IDLE_TIME_SEC=300`
+    - Legacy (database/sql): `DB_MAX_OPEN_CONNS=25`, `DB_MAX_IDLE_CONNS=25`, `DB_CONN_MAX_LIFETIME_SEC=900`, `DB_CONN_MAX_IDLE_TIME_SEC=300`
+    - pgxpool (current): `PGX_MAX_CONNS`, `PGX_CONN_MAX_LIFETIME_SEC`, `PGX_CONN_MAX_IDLE_TIME_SEC`
   - Optional refresh tokens (feature flag):
     - `AUTH_REFRESH_ENABLED=false` (enable to expose `/v1/auth/refresh` and `/v1/auth/logout`)
     - `REFRESH_TTL_SEC=604800` (7d default; only used when refresh is enabled; controls rotation TTL)
@@ -82,6 +82,7 @@ Handler returns HTTP Response
   - `make build|run|test|fmt|vet|lint`
   - `make dev-up|dev-down` (compose dev), `make prod-up|prod-down`
   - `make tools` (install Air, golangci-lint)
+  - `make sqlc-gen` (generate sqlc code; auto-run before build/run/test)
 - Linting: configure via `.golangci.yml` (optional in CI).
 
 Default API base URL: `http://localhost:8080`
@@ -151,9 +152,23 @@ When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
 - Set environment variables securely on host/CI (especially `JWT_SECRET`, `DB_PASSWORD`).
 - Do not expose the DB port publicly; keep it on an internal network.
 
-## Database migrations
-- Migrations reside in `migrations/` and run automatically on startup.
-- Optionally manage them with the `golang-migrate` CLI.
+## Database & data access
+- Migrations reside in `migrations/` and run automatically on startup (golang-migrate via pgx stdlib).
+- Data access uses `pgx` + `sqlc`. SQL lives under `internal/infras/storage/postgres/sqlc/` and generates Go code into the same package.
+- Optionally manage migrations with the `golang-migrate` CLI and regenerate code with `sqlc`.
+
+### Using sqlc (code generation)
+- Generated Go files under `internal/infras/storage/postgres/sqlc/*.go` are not committed.
+- Generation is automated in Makefile (pre-build). For manual use:
+  1) Install tool once: `make tools` (installs sqlc)
+  2) Generate: `make sqlc-gen` (or `sqlc generate`)
+
+### pgxpool tuning via env
+- Optional env vars (non-positive = defaults):
+  - `PGX_MAX_CONNS`
+  - `PGX_CONN_MAX_LIFETIME_SEC`
+  - `PGX_CONN_MAX_IDLE_TIME_SEC`
+- Included in `docker-compose.yml` for convenience. Map is applied in `cmd/api/bootstrap.go` → `NewPGXPool`.
 
 ## Sample endpoints
 - `POST /v1/auth/register` – create a new user
@@ -174,7 +189,7 @@ When `AUTH_REFRESH_ENABLED=true` and Redis configured, the following apply:
 
 ## Project layout
 ```
-GoStartKit/
+gostartkit/
 ├─ cmd/
 │  └─ api/                  # Composition root (main, bootstrap, wiring)
 ├─ internal/
@@ -311,7 +326,7 @@ Responses
 ### Composition root wiring (cmd/api)
 ```txt
 config.Load
-  → initPostgresAndMigrate (Build DSN → Run migrations → Open *sql.DB)
+  → initPostgresAndMigrate (Build URL → Run migrations → Open *pgxpool.Pool)
   → initJWTService (infra) then build validator func for middleware
   → (optional) seedInitialUser
   → loadRBACPolicy (YAML)
@@ -374,7 +389,7 @@ go mod tidy && go build ./...
 ```bash
 git remote add upstream <starter-kit-url>
 git fetch upstream
-git merge upstream/dev   # hoặc rebase tuỳ workflow
+git merge upstream/dev   # or rebase depending on your workflow
 
 # If new files from upstream reintroduce old import prefix, run the script again
 ./scripts/rename_project.sh github.com/you/yourapp gostartkit
@@ -383,7 +398,7 @@ go mod tidy && go build ./...
 
 3) Optional but recommended – align names across configs/docs:
 - Docker image/name and references in `docker-compose*.yml` (e.g., `gostartkit` → your image name)
-- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` (e.g., "Go StartKit API")
+- OpenAPI title in `internal/interfaces/http/apidocs/openapi.json` (e.g., "Go Startkit API")
 - README/CHANGELOG headings and references
 - Default JWT metadata in `internal/config/config.go` (issuer/audience: defaults are `app`/`app-clients`)
 - Dev DB name/user in compose files (defaults currently `gostartkit`)

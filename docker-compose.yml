@@ -62,6 +62,10 @@ services:
       REDIS_ADDR: ${REDIS_ADDR}
       REDIS_PASSWORD: ${REDIS_PASSWORD}
       REDIS_DB: ${REDIS_DB:-0}
+      # Optional pgxpool tuning
+      PGX_MAX_CONNS: ${PGX_MAX_CONNS}
+      PGX_CONN_MAX_LIFETIME_SEC: ${PGX_CONN_MAX_LIFETIME_SEC}
+      PGX_CONN_MAX_IDLE_TIME_SEC: ${PGX_CONN_MAX_IDLE_TIME_SEC}
     ports:
       - "8080:8080"
     restart: always

@@ -12,6 +12,8 @@ import (
 	domuser "gostartkit/internal/domain/user"
 	infdb "gostartkit/internal/infras/db"
 	pgstore "gostartkit/internal/infras/storage/postgres"
+
+	"github.com/jackc/pgx/v5/pgxpool"
 )
 
 func TestPostgres_UserRepository_CRUD(t *testing.T) {
@@ -26,21 +28,24 @@ func TestPostgres_UserRepository_CRUD(t *testing.T) {
 	name := getenvOr("DB_NAME", "gostartkit")
 	ssl := getenvOr("DB_SSLMODE", "disable")
 
-	dsn := infdb.BuildPostgresDSN(host, port, user, pass, name, ssl)
+	url := infdb.BuildPostgresURL(host, port, user, pass, name, ssl)
 
 	// Run migrations from repo root /migrations
 	_, filename, _, _ := runtime.Caller(0)
 	repoRoot := filepath.Clean(filepath.Join(filepath.Dir(filename), "../../.."))
 	migrationsPath := filepath.Join(repoRoot, "migrations")
-	infdb.RunMigrations(dsn, migrationsPath)
+	infdb.RunMigrations(url, migrationsPath)
 
-	db, err := pgstore.NewPostgresConnection(dsn)
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	pool, err := pgstore.NewPGXPool(ctx, url)
 	if err != nil {
 		t.Fatalf("open db: %v", err)
 	}
-	defer db.Close()
+	defer pool.Close()
 
-	repo := pgstore.NewUserRepository(db)
+	_ = pgxpool.Config{}
+	repo := pgstore.NewUserRepository(pool)
 
 	// Create user
 	email, _ := domuser.NewEmail("it@example.com")

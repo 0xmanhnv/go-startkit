@@ -1,4 +1,4 @@
-## AppSecHub — Pending (High Priority)
+## Go Startkit — Pending (High Priority)
 
 - Observability
   - Expose `/metrics` (Prometheus)
@@ -19,7 +19,7 @@
   - Rotate secrets periodically; inject at runtime (ENV/volumes)
   - Keep `/swagger` disabled in prod (already enforced by ENV)
 
-## AppSecHub — Codebase Review (Initial)
+## Go Startkit — Codebase Review (Initial)
 
 ### Current status (updated)
 - Completed:
@@ -95,7 +95,7 @@
      - Called `h.Usecase.Login.Execute(...)` but `Login` usecase was missing.
 
 5) Incorrect auth service import (historical)
-   - `internal/application/service/auth_service.go` imported `appsechub/internal/domain` (should be `internal/domain/user`).
+   - `internal/application/service/auth_service.go` imported `gostartkit/internal/domain` (should be `internal/domain/user`).
 
 6) Migrations & path (historical)
    - `migrations/` empty would cause `m.Up()` to fail; ensure valid files and correct path.
@@ -253,9 +253,9 @@
   - `HTTP_PORT=8080`
   - `HTTP_CORS_ALLOWED_ORIGINS=*`
   - `HTTP_SECURITY_HEADERS=false`
-  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=appsechub` `DB_PASSWORD=devpassword` `DB_NAME=appsechub` `DB_SSLMODE=disable`
+  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=gostartkit` `DB_PASSWORD=devpassword` `DB_NAME=gostartkit` `DB_SSLMODE=disable`
   - `MIGRATIONS_PATH=migrations`
-  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=appsechub` `JWT_AUDIENCE=appsechub-clients` `JWT_LEEWAY_SEC=30`
+  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=gostartkit` `JWT_AUDIENCE=gostartkit-clients` `JWT_LEEWAY_SEC=30`
   - `SEED_ENABLE=true` and `SEED_*` for dev admin
 
 12) Compose dev/prod — DONE
@@ -271,7 +271,7 @@
   - Added `registerAuthRoutes` covering `/register`, `/login` (with optional rate limit), and protected `/me`, `/change-password`.
   - Updated `registerAPIV1Routes` to call `registerAuthRoutes`.
 
-## AppSecHub — Pending (High Priority)
+## Go Startkit — Pending (High Priority)
 
 - Observability
   - Expose `/metrics` (Prometheus)
@@ -292,191 +292,53 @@
   - Rotate secrets periodically; inject at runtime (ENV/volumes)
   - Keep `/swagger` disabled in prod (already enforced by ENV)
 
-## AppSecHub — Codebase Review (Initial)
+## Go Startkit — Codebase Review (Initial)
 
-### Trạng thái hiện tại (cập nhật)
-- Đã hoàn thành:
-  - Wiring thủ công (DB → repo → hasher/JWT → usecases → handler → router)
-  - Tách `main` thành các hàm bootstrap chuyên biệt: `initPostgresAndMigrate`, `initJWTService`, `buildUserComponents`, `loadRBACPolicy`, `buildRouter`
-  - Usecase: CreateUser, Login + handler/router
-  - JWT claims có role; middleware JWTAuth, RequireRoles/RequirePermissions (RBAC)
-  - RBAC policy in-memory + nạp từ YAML (`RBAC_POLICY_PATH`) và cảnh báo role lạ
-  - Response envelope + mapping lỗi domain cơ bản; repo timeouts + map `sql.ErrNoRows`/`23505`
-  - CORS/Trusted proxies theo env; RequestID UUIDv4 + structured logging (slog)
-  - Health: `/healthz`; Ready: `/readyz` ping DB (timeout)
-  - Docker compose dev/prod; distroless runtime; hot-reload bằng Air
-  - Router chuẩn hóa: helper nhỏ `applyBaseMiddlewares`, `registerHealthRoutes`, `registerAPIV1Routes`, `registerAuthLogin` (rate limit theo config)
+### Current status (updated)
+- Completed:
+  - Manual wiring (DB → repo → hasher/JWT → usecases → handler → router)
+  - Split `main` into bootstrap helpers: `initPostgresAndMigrate`, `initJWTService`, `buildUserComponents`, `loadRBACPolicy`, `buildRouter`
+  - Usecases: CreateUser, Login + handler/router
+  - JWT claims include role; JWTAuth middleware; RequireRoles/RequirePermissions (RBAC)
+  - RBAC in-memory + YAML loading (`RBAC_POLICY_PATH`) and warn on unknown roles
+  - Response envelope + domain error mapping; repo timeouts + map `sql.ErrNoRows`/`23505`
+  - CORS/Trusted proxies via env; RequestID UUIDv4 + structured logging (slog)
+  - Health: `/healthz`; Ready: `/readyz` DB ping (timeout)
+  - Docker compose dev/prod; distroless runtime; hot-reload with Air
+  - Router normalization: helpers `applyBaseMiddlewares`, `registerHealthRoutes`, `registerAPIV1Routes`, `registerAuthLogin` (rate limit via config)
 
-#### Cập nhật mới (đã triển khai)
-- CORS: loại bỏ CORS mặc định ở `applyBaseMiddlewares`; chỉ còn áp dụng qua `applyCORSFromConfig` (env `HTTP_CORS_ALLOWED_ORIGINS`).
-- Gom nhóm route `auth` vào một hàm: `registerAuthRoutes` (đã bao gồm `/register`, `/login` và các route bảo vệ `/me`, `/change-password`); bỏ `registerAuthLogin`.
-- Thông báo lỗi JSON thân thiện: body rỗng → `"request body is empty"`; JSON sai cú pháp → `"malformed JSON at position N"`; sai kiểu → `"invalid type for field <field>"`.
-- JWT: đặt `NotBefore=now` khi phát token; khi validate nếu `now + leeway < nbf` thì trả lỗi `token not yet valid` (giảm ảnh hưởng clock skew).
- - Router API: hợp nhất còn một hàm `NewRouter(userHandler, cfg, authMiddleware...)`; loại bỏ biến thể không có `cfg`.
- - Graceful shutdown: dùng `http.Server` (`ReadHeaderTimeout=5s`, `IdleTimeout=60s`) + `Shutdown(15s)` khi nhận `SIGINT/SIGTERM`; đóng `sqlDB` sau khi dừng.
-- Logger: thêm global default logger (`logger.Init` một lần ở entrypoint, dùng `logger.L()` ở mọi nơi; có `SetLevel` đổi mức log runtime). Đã thay toàn bộ `log.Printf`/`slog.Warn` còn sót bằng `logger.L().*`. Không tạo logger mới trong router; dùng `logger.L()`.
- - HTTP error mapping: chuẩn hóa mã lỗi/HTTP status cho `Register`, `Login`, `GetMe`, `ChangePassword` (400/401/404/409/500) qua `response` helpers.
-- IoC cho Auth: middleware `JWTAuth` nhận `TokenValidator func` thay vì phụ thuộc trực tiếp vào infra JWT; validator được bọc/tiêm ở composition root.
-- Đổi Application “service” → “ports”: `TokenIssuer`, `EmailSender`, `SMSSender`, `ObjectStorage`. Cập nhật import & build OK.
-- Bcrypt cost theo env: `BCRYPT_COST` (4–31), mặc định dùng `bcrypt.DefaultCost` nếu không set/không hợp lệ.
- - Config singleton: `config.Load()` parse 1 lần (sync.Once); inject `*config.Config` từ composition root, không gọi `Load()` trong leaf code. Đã chỉnh `buildUserComponents` để nhận `cfg` và truyền `cfg.Security.BcryptCost` vào `NewBcryptHasher`.
-- Security headers: thêm CSP mặc định `default-src 'self'; object-src 'none'; frame-ancestors 'none'; base-uri 'self'`; HSTS chỉ bật khi HTTPS (TLS hoặc `X-Forwarded-Proto=https`).
+#### Recent updates (implemented)
+- CORS: removed default CORS; applied only via `applyCORSFromConfig` (env `HTTP_CORS_ALLOWED_ORIGINS`).
+- Grouped `auth` routes in one function; removed `registerAuthLogin`.
+- Friendly JSON error messages: empty body, malformed JSON, wrong type.
+- JWT: set `NotBefore=now`; validate with leeway against NBF.
+- Router API: consolidated to `NewRouter(userHandler, cfg, authMiddleware...)`.
+- Graceful shutdown with `http.Server`; close DB on stop.
+- Logger: global default (`logger.Init`), `logger.L()` everywhere; runtime level.
+- HTTP error mapping: standardized for `Register`, `Login`, `GetMe`, `ChangePassword`.
+- IoC for Auth: JWTAuth takes `TokenValidator` function.
+- Application terminology: switched to "ports".
+- Bcrypt cost via env (`BCRYPT_COST`), default to bcrypt default when unset/invalid.
+- Config singleton: `config.Load()` parses once; inject `*config.Config`; pass `cfg.Security.BcryptCost` into `NewBcryptHasher`.
+- Security headers: default CSP; HSTS only when HTTPS.
 
-- Còn lại/Khuyến nghị tiếp:
-  - ~~Nạp RBAC từ YAML ngay trong `main` khi có `RBAC_POLICY_PATH`~~ (đã nạp)
-  - ~~Bảo vệ nhóm `/v1/admin`: chain `JWTAuth(jwtSvc)` trước `RequirePermissions(...)`~~ (đã thêm)
-  - ~~Loại bỏ middleware tự đặt `X-Request-Id` trong `NewRouter`; chỉ dùng `middleware.RequestID()`~~ (đã bỏ)
-  - ~~JWT hardening: iss/aud/nbf + leeway~~ (đã thêm; còn refresh tokens nếu cần)
-  - CI/CD: build/test/lint/govulncheck + Docker image build & image scan (GitHub Actions)
-  - Chất lượng: `golangci-lint` + `Makefile` targets (build/run/test/lint/migrate)
-  - Testing: unit (domain/usecase), HTTP handlers, integration repo với Postgres (testcontainers/compose)
-  - Observability: Prometheus metrics (kèm `/metrics`), OpenTelemetry tracing (HTTP/DB), pprof (dev-only)
-  - ~~Security headers, rate limit (login)~~ (đã thêm)
-  - Security nâng cao: refresh token/rotation; tăng cost bcrypt theo env hoặc chuyển argon2id
-  - API Docs: OpenAPI/Swagger, route `/swagger` (dev-only)
-  - DevEx: scripts migrate tiện (make migrate-up/down), seed script/command
-  - ĐÃ: thêm cơ chế seed user khởi tạo qua biến env `SEED_*` (tạo admin nếu chưa tồn tại)
+- Remaining/Next recommendations:
+  - RBAC policy load in `main` (done)
+  - Protect `/v1/admin` group (done)
+  - Remove manual `X-Request-Id` header (done)
+  - JWT hardening (done; refresh tokens optional)
+  - CI/CD: build/test/lint/govulncheck + Docker image build & scan
+  - Quality: `golangci-lint` + Makefile targets
+  - Testing: unit (domain/usecase), HTTP handlers, integration with Postgres
+  - Observability: Prometheus `/metrics`, OpenTelemetry tracing, pprof (dev-only)
+  - Security enhancements: refresh rotation; higher bcrypt cost or argon2id
+  - API Docs: OpenAPI/Swagger, `/swagger` (dev-only)
+  - DevEx: migration scripts, seed script/command
 
-### Ghi chú hậu chuyển đổi (bỏ Wire)
-- Đã bỏ hoàn toàn Wire; wiring thủ công trong `cmd/api/main.go`.
-- Cần rà soát và loại bỏ tham chiếu Wire còn lại trong tài liệu để tránh gây hiểu nhầm.
+### Post-migration notes (wire removed)
+- Wire removed completely; manual wiring in `cmd/api/main.go`.
+- Review and remove any remaining Wire mentions in docs to avoid confusion.
 
-### Kiến trúc hiện tại (tổng quan)
-- **Phân lớp**: `internal/domain` (Entity/Value Object), `internal/application` (UseCase/DTO/Service), `internal/interfaces/http` (Gin router/handler/middleware), `internal/infras` (DB migrate, Security/JWT), `internal/config` (load env).
-- **HTTP**: Gin router tại `internal/interfaces/http/route.go`, handler người dùng tại `internal/interfaces/http/handler/user_handler.go`.
-- **Domain**: `internal/domain/user` với `User`, `Email`, `Role`, và bộ lỗi domain.
-- **Security**: JWT service tại `internal/infras/security/jwt_service.go` và middleware xác thực tại `internal/interfaces/http/middleware/auth.go`.
-- **DB**: Migrator dùng `golang-migrate` tại `internal/infras/db/migrator.go`.
-- **Config**: `internal/config/config.go` + `internal/config/loader.go` (nạp env bằng `caarlos0/env`).
-
-### Trạng thái build hiện tại
-- Build: OK trên Go 1.24.
-
-### Vấn đề chính cần khắc phục
-1) (đã xử lý ở code hiện tại) — mục này được loại bỏ khỏi danh sách.
-2) (đã xử lý ở code hiện tại) — mục này được loại bỏ khỏi danh sách.
-
-3) **UseCase/DTO chưa đồng bộ**
-   - `internal/application/usecase/userusecase/create_user.go`:
-     - Thiếu định nghĩa `PasswordHasher`.
-     - Dùng `dto.CreateUserRequest` nhưng DTO này chưa tồn tại.
-     - Gọi `user.NewUser(input.Email, hashed)` sai chữ ký (domain yêu cầu `firstName, lastName, email, password, role`).
-   - `internal/application/dto/user_dto.go` chưa có `CreateUserRequest`; có `LoginRequest`, `LoginResponse`, `UserResponse`.
-
-4) **Handler phụ thuộc type/usecase không tồn tại**
-   - `internal/interfaces/http/handler/user_handler.go`:
-     - Field `Usecase userusecase.UserUsecase` không tồn tại (chưa định nghĩa interface/struct `UserUsecase`).
-     - Dùng `h.Usecase.Login.Execute(...)` nhưng `Login` usecase chưa có.
-
-5) **Auth service import sai**
-   - `internal/application/service/auth_service.go` import `appsechub/internal/domain` (không tồn tại). Domain nằm ở `internal/domain/user`.
-
-6) **Migrations trống và đường dẫn**
-   - Thư mục `migrations/` chỉ có `.gitkeep`. `m.Up()` sẽ lỗi nếu không có file hợp lệ hoặc đường dẫn sai.
-   - `main` đang truyền `cfg.DB.MigrationsPath` (không có). Cần thêm vào `Config` hoặc mặc định `./migrations`.
-
-7) (đã xử lý) — đã hợp nhất constructor router và wiring đúng `*handler.UserHandler`.
-
-8) Dockerfile: đang dùng `golang:1.24-alpine` ổn định; healthcheck HTTP có thể cân nhắc thêm sau.
-
-### Đề xuất lộ trình sửa (ưu tiên)
-1) **Sửa cấu hình và entrypoint**
-   - Thêm `MigrationsPath` vào `Config` hoặc mặc định `./migrations`.
-   - Thêm hàm build DSN từ `DBConfig` (Postgres). Sửa `main` dùng `cfg.HTTP.Port`.
-
-2) **Thêm storage Postgres và repository**
-   - Tạo `internal/infras/storage/postgres/` với:
-     - `NewPostgresConnection(cfg *config.Config) (*sql.DB, error)`.
-     - `user_repository.go` implement `internal/domain/user.Repository`.
-
-3) **Hoàn thiện migrations**
-   - Thêm `migrations/0001_init.up.sql` và `.down.sql` cho bảng `users` (email unique, hashed password, role, timestamps).
-
-4) **Hoàn thiện UseCase/DTO**
-   - Thêm `dto.CreateUserRequest { FirstName, LastName, Email, Password, Role }`.
-   - Định nghĩa `PasswordHasher` (hoặc dùng service riêng) và implement (bcrypt/argon2id).
-   - Sửa `CreateUserUseCase.Execute` để validate, hash, lưu repo, trả `UserResponse`.
-   - Thêm `LoginUseCase` (get by email, compare password, generate JWT).
-
-5) **Sửa Handler/Router**
-   - Định nghĩa interface `UserUsecase` hoặc truyền riêng từng usecase vào `UserHandler`.
-   - Bổ sung route `POST /v1/auth/register` cho `Register`.
-
-6) **Sửa Wire**
-   - Sửa import đúng `usecase` và types, thêm providers (db, repo, jwt, usecases, handlers), generate `wire_gen.go`.
-
-7) **Cập nhật Dockerfile**
-   - Dùng base image Go hợp lệ (vd `golang:1.22-alpine`).
-   - Bỏ hoặc thay `HEALTHCHECK` bằng endpoint HTTP.
-
-### Gợi ý bảo mật ban đầu
-- **Hash mật khẩu**: dùng `bcrypt` (cost ≥ 12) hoặc `argon2id`; không lưu plaintext.
-- **JWT**: key từ secret manager, set `aud/iss`, thời hạn ngắn; cân nhắc refresh token/rotation.
-- **Rate limiting**: áp dụng cho login; lockout tạm thời theo IP/email.
-- **DB**: tài khoản DB with least privilege; dùng SSL/TLS khi kết nối.
-- **Logs**: không log secrets/PPI; structured logging; gắn correlation ID.
-- **Headers**: thêm security headers (CORS, HSTS, X-Content-Type-Options, ...).
-- **Migrations**: kiểm soát schema changes; test rollback.
-
-### Việc nên làm tiếp theo (ngắn gọn)
-- Manual wiring trong `main` để endpoint `/v1/auth/register` hoạt động thực tế (khởi tạo DB, repo, hasher, usecase, handler, router).
-- Implement `LoginUseCase` + mở route `POST /v1/auth/login` (getByEmail → compare password → JWT).
-- Thêm `.env.example`, `Makefile`, `docker-compose.yml` (Postgres), cấu hình `golangci-lint`.
-- Bổ sung middleware CORS/logger/request-id; thống nhất format lỗi/response.
-- Thêm tests cơ bản: unit (usecases), integration (repo + Postgres), HTTP handlers.
-
-### Đề xuất cải thiện Clean Architecture / DDD
-- Inversion of Control (tách hạ tầng khỏi application):
-  - Tránh `usecase` import trực tiếp `internal/infras/*`.
-  - Tạo ports trong `internal/application/ports` (ví dụ: `TokenIssuer`, `EmailSender`, `SMSSender`, `ObjectStorage`), để usecase chỉ phụ thuộc interface. Hạ tầng implement và inject ở `main`.
-  - JWT hardening: thêm kiểm tra `iss/aud/nbf/exp` (có leeway) trong `ValidateToken` qua cấu hình.
-
-- DTO và biên giới layer:
-  - Giữ DTO HTTP ở `interfaces/http` hoặc dùng DTO riêng cho transport; `usecase` có thể nhận “input model/command” nội bộ để giảm phụ thuộc transport.
-
-- Domain invariants và VO:
-  - Đưa validate email/role vào `user.NewUser(...)` để đảm bảo bất biến ngay khi khởi tạo (kể cả tên không rỗng).
-  - Quyết định với `Password` VO: hoặc dùng thật trong `User` (và cập nhật repo scan/insert), hoặc loại bỏ VO này để tránh rối.
-
-- Mapping lỗi domain → HTTP:
-  - Xây dựng bảng ánh xạ (ví dụ `ErrUserNotFound` → 404, `ErrEmailAlreadyExists` → 409, `ErrInvalidRole` → 400) và áp dụng tại handler qua package `response`.
-  - Giữ message an toàn, tránh lộ chi tiết nội bộ; log nội bộ kèm `request_id`.
-
-  ~- Cần ánh xạ trong handler~
-  - ĐÃ: ánh xạ cơ bản trong `UserHandler.Register` và `UserHandler.Login`; `ErrEmailAlreadyExists` map từ Postgres `23505`; `ErrInvalidEmail` dùng trong `NewEmail`.
-
-- Repository robustness:
-  - ~~Thêm `context.WithTimeout` cho từng truy vấn.~~
-  - ~~Map `sql.ErrNoRows` → `domain.ErrUserNotFound`.~~
-  - Cân nhắc retry nhẹ (idempotent) với lỗi network tạm thời. (chưa)
-  - ~~Map lỗi unique-violation Postgres (code `23505`) → `domain.ErrEmailAlreadyExists`.~~
-
-- Health/Ready thực sự:
-  - ~~`GET /readyz` ping DB (với timeout) để phản ánh readiness đúng; trả 500 khi DB down.~~
-
-- Middleware & AuthZ:
-  - Dùng `RequireRoles(...)` để bảo vệ route mẫu (ví dụ nhóm `/v1/admin`).
-  - Cân nhắc tách policy role→permissions nếu cần chi tiết hơn RBAC đơn giản.
-  - ~~RequestID: dùng UUIDv4 thay vì timestamp; thêm middleware logger structured (zap/slog) kèm `request_id`, status, latency.~~
-  - ~~CORS: ở prod dùng whitelist qua env thay vì `*`.~~
-  - ~~Trusted proxies: đọc `HTTP_TRUSTED_PROXIES` và áp dụng vào `SetTrustedProxies`.~~
-
-- Testing & quan sát:
-  - Unit test cho domain/usecase (mock repo/hasher/jwt), integration test repo với Postgres (testcontainers).
-  - Thêm metrics (Prometheus) và tracing (OpenTelemetry) ở HTTP và DB.
-  - Thêm CI (lint/test/build/vuln-scan) và threshold coverage hợp lý.
-
-- Dockerfile base:
-  - Dùng base Go chính thức sẵn có (ví dụ `golang:1.22-alpine`) thay vì phiên bản chưa ổn định.
-
-### Lộ trình hành động ngắn
-1) Tạo `internal/application/service/token_service.go` và cập nhật `LoginUseCase` dùng interface này; inject `security.JWTService` ở `main`.
-2) Dồn validation vào `user.NewUser(...)`; chuẩn hóa mapping lỗi domain → HTTP trong handler (thêm bảng map error→status).
-3) Repo: map `sql.ErrNoRows` và Postgres `23505`; giữ timeout; thêm ping DB thật trong `/readyz`.
-4) Middleware: chuyển RequestID sang UUIDv4; thêm logger structured; CORS whitelist từ env; `HTTP_TRUSTED_PROXIES` vào router.
-5) Viết test cơ bản cho `CreateUserUseCase` và `LoginUseCase` (mock repo/hasher/jwt) và 1–2 test handler; thêm CI đơn giản.
-
-Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một cụm lỗi lớn để tiện theo dõi tiến độ.
 
 
 ## Fix Checklist (Actionable)
@@ -559,9 +421,9 @@ Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một 
   - `HTTP_PORT=8080`
   - `HTTP_CORS_ALLOWED_ORIGINS=*`
   - `HTTP_SECURITY_HEADERS=false`
-  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=appsechub` `DB_PASSWORD=devpassword` `DB_NAME=appsechub` `DB_SSLMODE=disable`
+  - `DB_HOST=localhost` `DB_PORT=5432` `DB_USER=gostartkit` `DB_PASSWORD=devpassword` `DB_NAME=gostartkit` `DB_SSLMODE=disable`
   - `MIGRATIONS_PATH=migrations`
-  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=appsechub` `JWT_AUDIENCE=appsechub-clients` `JWT_LEEWAY_SEC=30`
+  - `JWT_SECRET=change-me-in-dev` `JWT_EXPIRE_SEC=3600` `JWT_ISSUER=gostartkit` `JWT_AUDIENCE=gostartkit-clients` `JWT_LEEWAY_SEC=30`
   - `SEED_ENABLE=true` và bộ `SEED_*` cho admin dev
 
 ~~12) Compose dev/prod~~ (ĐÃ THỰC HIỆN)
@@ -578,4 +440,54 @@ Tài liệu này sẽ được cập nhật sau mỗi lần khắc phục một 
   - Cập nhật `registerAPIV1Routes` gọi `registerAuthRoutes`; bỏ hàm riêng `registerAuthLogin`.
 
 Thứ tự khuyến nghị thực hiện: (1) CORS, (2) Security headers/HSTS, (3) Graceful shutdown, (4) Go toolchain, (5) JWT nbf, (7) Mapping lỗi, (11) Env template; sau đó nâng cấp Observability/Tests/CI.
+
+
+## Post-pgx + sqlc review (Aug 2025)
+
+### Current status
+- Switched DB stack to pgxpool + sqlc, retained golang-migrate.
+- Added sqlc config/queries under `internal/infras/storage/postgres/sqlc/` with overrides (`uuid`, `timestamptz → time.Time`).
+- Refactored repository to sqlc, handled unique_violation via `pgconn.PgError` 23505.
+- Migrator uses stdlib `pgx` driver; readiness checks use `pgxpool.Pool.Ping`.
+- Makefile: `sqlc`, `sqlc-gen` targets; auto-run sqlc before build/run/test; `make tools` installs sqlc.
+- Build and unit tests: green.
+
+### Gaps and recommendations (prioritized)
+- Observability
+  - [ ] Add Prometheus metrics endpoint `/metrics` (request count/latency, DB pool stats, rate-limit hits).
+  - [ ] Enable pprof in dev-only.
+  - [ ] Add OpenTelemetry tracing (HTTP + DB), sampling/toggle via env.
+- Security
+  - [ ] Consider JWT RS256/EdDSA and key rotation (kid header), short TTL; keep refresh rotation.
+  - [ ] Increase bcrypt cost per env or migrate to argon2id; benchmark targets.
+  - [ ] Lock CORS origins in prod via env.
+  - [ ] Document secret management (JWT, DB) with a secret manager.
+- Availability & resilience
+  - [ ] Include Redis in readiness when features depend on it (limiter/refresh).
+  - [ ] Option to fail-closed on Redis limiter error for `/v1/auth/login` (config flag).
+  - [ ] Light retry for idempotent reads on transient errors (pgx).
+- Database
+  - [ ] Expose pgxpool tunables via config (MaxConns, Lifetime/IdleTime). Map from `config.DB` or new `config.PGX`.
+  - [ ] Add DB constraints: CHECK on `role`, tighten indexes per new queries.
+  - [ ] Consider DB-side trigger for `updated_at` or enforce uniform updates in repo/usecases.
+- API/Handlers
+  - [ ] Centralize error→HTTP mapping table and apply across handlers consistently.
+  - [ ] Add login rate-limit per account (email) in addition to IP.
+- CI/CD & quality
+  - [ ] GitHub Actions: build/test/lint/govulncheck; Docker image build; Trivy image scan.
+  - [ ] Expand lint set: gosec, gocritic, misspell, depguard, errorlint.
+  - [ ] Pin tool versions (sqlc, golangci-lint) and/or use `go:generate` for sqlc.
+  - [ ] Improve tests: table-driven handler tests; integration via testcontainers; set coverage thresholds.
+- Refresh token UX
+  - [ ] Session list per user, revoke-all, token binding (optional) by device/session.
+
+### Action items snapshot
+- [x] Migrate to pgx + sqlc + migrate
+- [x] Update Makefile to auto-run `sqlc generate`
+- [ ] Add `/metrics`, pprof (dev)
+- [ ] OTel tracing
+- [ ] JWT key management & rotation
+- [ ] pgxpool config via env
+- [ ] CI pipeline and image scanning
+- [ ] Enhanced lint rules and tests
 
