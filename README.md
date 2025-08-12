@@ -89,10 +89,6 @@ Default API base URL: `http://localhost:8080`
 
 ## Testing
 
-[![Go version](https://img.shields.io/badge/go-1.24+-blue)](https://go.dev)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-
 ### Unit tests
 - Run all unit tests:
   ```bash
