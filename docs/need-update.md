@@ -1,4 +1,4 @@
-# AppSecHub — Next Updates (Actionable)
+# Go startkit — Next Updates (Actionable)
 
 - Domain & schema
   - Add tables/migrations: `projects`, `assets`, `findings`, `evidence`, `integrations`, `pipelines`, `sbom_components`, `pentest_runs`.
