@@ -4,9 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/base64"
-	"errors"
 	"time"
 
+	"gostartkit/internal/application/apperr"
 	"gostartkit/internal/application/ports"
 
 	"github.com/redis/go-redis/v9"
@@ -53,6 +53,9 @@ func (s *RedisRefreshStore) Rotate(ctx context.Context, oldToken string, ttlSeco
 func (s *RedisRefreshStore) Revoke(ctx context.Context, token string) error {
 	uid, err := s.client.Get(ctx, refreshKey(token)).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return apperr.ErrInvalidRefreshToken
+		}
 		return err
 	}
 	pipe := s.client.TxPipeline()
@@ -65,10 +68,13 @@ func (s *RedisRefreshStore) Revoke(ctx context.Context, token string) error {
 func (s *RedisRefreshStore) Validate(ctx context.Context, token string) (string, error) {
 	uid, err := s.client.Get(ctx, refreshKey(token)).Result()
 	if err != nil {
+		if err == redis.Nil {
+			return "", apperr.ErrInvalidRefreshToken
+		}
 		return "", err
 	}
 	if uid == "" {
-		return "", errors.New("invalid_refresh_token")
+		return "", apperr.ErrInvalidRefreshToken
 	}
 	return uid, nil
 }

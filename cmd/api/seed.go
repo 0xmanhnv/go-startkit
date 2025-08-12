@@ -34,7 +34,10 @@ func seedInitialUser(_ any, repo *pgstore.UserRepository, hasher userusecase.Pas
 	if !role.IsValid() {
 		role = domuser.RoleAdmin
 	}
-	hashed := hasher.Hash(cfg.Seed.Password)
+	hashed, err := hasher.Hash(cfg.Seed.Password)
+	if err != nil {
+		return err
+	}
 	u := domuser.NewUser(cfg.Seed.FirstName, cfg.Seed.LastName, emailVO, hashed, role)
 	if err := repo.Save(ctx, u); err != nil {
 		return err

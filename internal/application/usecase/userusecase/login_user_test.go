@@ -29,7 +29,7 @@ func (f *fakeRepo) Delete(ctx context.Context, id uuid.UUID) error    { return n
 
 type fakeHasher struct{}
 
-func (fakeHasher) Hash(raw string) string                 { return "hashed:" + raw }
+func (fakeHasher) Hash(raw string) (string, error)        { return "hashed:" + raw, nil }
 func (fakeHasher) Compare(hashed string, raw string) bool { return hashed == "hashed:"+raw }
 
 type fakeTokenIssuer struct{}

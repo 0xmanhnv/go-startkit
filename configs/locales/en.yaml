@@ -1,0 +1,9 @@
+field_required: "field %s is required"
+min_len: "field %s must be at least %s characters"
+email: "field %s must be a valid email"
+strong_password: "field %s must be a stronger password (>=12, upper/lower/digit/special, no spaces)"
+malformed_json_at: "malformed JSON at position %s"
+invalid_type_for_field: "invalid type for field %s"
+invalid_value_for_field: "invalid value for field %s"
+empty_body: "request body is empty"
+

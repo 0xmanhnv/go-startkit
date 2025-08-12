@@ -55,6 +55,12 @@ Handler returns HTTP Response
    - `JWT_AUDIENCE=app-clients` (default)
    - `JWT_LEEWAY_SEC=30`
   - Optional HTTP security & rate limit:
+    - `HTTP_LOGIN_RATELIMIT_RPS=1`
+    - `HTTP_LOGIN_RATELIMIT_BURST=5`
+    - `HTTP_LOGIN_RATELIMIT_FAIL_CLOSED=false` (set `true` to deny on Redis errors)
+  - i18n (validation messages):
+    - `I18N_LOCALES_DIR=configs/locales`
+    - `I18N_DEFAULT_LOCALE=en`
    - `HTTP_SECURITY_HEADERS=true` (enable common security headers; use behind TLS)
    - `HTTP_LOGIN_RATELIMIT_RPS=1`
    - `HTTP_LOGIN_RATELIMIT_BURST=5`
@@ -366,6 +372,9 @@ cmd/api          → all (composition root only)
 
 ## Documentation
 - Codebase review & pending fixes: `docs/review.md`
+- Best practices (security & ops): `docs/best-practices.md`
+- Validation layers overview: `docs/validation-architecture.md`
+- Internationalization: `docs/i18n.md`
 - RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
 - Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
 

@@ -61,7 +61,11 @@ func RateLimit(rps float64, burst int) gin.HandlerFunc {
 			c.Header("X-RateLimit-Limit", strconv.FormatFloat(rps, 'f', -1, 64))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(time.Duration(retryAfterSec)*time.Second).Unix(), 10))
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too_many_requests"})
+			// standardized envelope
+			// use response package to keep consistency
+			// can't import cycle here; keep local to middleware package only → use inline JSON is avoided
+			// To avoid cycle, we keep AbortWithStatusJSON but match code/message constants
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": gin.H{"code": "too_many_requests", "message": "too many requests"}})
 			return
 		}
 		c.Next()
@@ -96,7 +100,7 @@ func RateLimitForPath(targetPath string, rps float64, burst int) gin.HandlerFunc
 			c.Header("X-RateLimit-Limit", strconv.FormatFloat(rps, 'f', -1, 64))
 			c.Header("X-RateLimit-Remaining", "0")
 			c.Header("X-RateLimit-Reset", strconv.FormatInt(time.Now().Add(time.Duration(retryAfterSec)*time.Second).Unix(), 10))
-			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": "too_many_requests"})
+			c.AbortWithStatusJSON(http.StatusTooManyRequests, gin.H{"error": gin.H{"code": "too_many_requests", "message": "too many requests"}})
 			return
 		}
 		c.Next()

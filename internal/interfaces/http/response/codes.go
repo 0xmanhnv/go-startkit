@@ -11,6 +11,8 @@ const (
 	CodeConflict            = "conflict"
 	CodeUnauthorized        = "unauthorized"
 	CodeServerError         = "server_error"
+	CodePayloadTooLarge     = "payload_too_large"
+	CodeTooManyRequests     = "too_many_requests"
 )
 
 const (
@@ -19,4 +21,6 @@ const (
 	MsgInvalidRefreshToken = "refresh token invalid or expired"
 	MsgNotFound            = "resource not found"
 	MsgServerError         = "internal error"
+	MsgPayloadTooLarge     = "request body exceeds limit"
+	MsgTooManyRequests     = "too many requests"
 )

@@ -3,6 +3,7 @@ package middleware
 import (
 	"net/http"
 
+	resp "gostartkit/internal/interfaces/http/response"
 	"gostartkit/internal/interfaces/http/validation"
 
 	"github.com/gin-gonic/gin"
@@ -18,14 +19,28 @@ func ValidateJSON[T any](ctxKey string, maxBodyBytes int64) gin.HandlerFunc {
 		var payload T
 		if err := c.ShouldBindJSON(&payload); err != nil {
 			if validation.IsBodyTooLarge(err) {
-				c.AbortWithStatusJSON(http.StatusRequestEntityTooLarge, gin.H{"error": gin.H{"code": "payload_too_large", "message": "request body exceeds limit"}})
+				resp.PayloadTooLarge(c, resp.CodePayloadTooLarge, resp.MsgPayloadTooLarge)
 				return
 			}
-			code, msg := validation.MapBindJSONError(err)
-			c.AbortWithStatusJSON(http.StatusBadRequest, gin.H{"error": gin.H{"code": code, "message": msg}})
+			// Prefer returning detailed list of validation errors when available
+			if verrs := validation.MapValidationErrors(err); len(verrs) > 0 {
+				// Localize messages using Accept-Language
+				localized := validation.MapValidationErrorsWithLocale(GetLocale(c), err)
+				if len(localized) == 0 {
+					localized = verrs
+				}
+				resp.BadRequestWithDetails(c, resp.CodeInvalidRequest, resp.MsgInvalidJSON, localized)
+				return
+			}
+			// Fallback single-error mapping with locale
+			code, msg := validation.MapBindJSONErrorWithLocale(GetLocale(c), err)
+			resp.BadRequest(c, code, msg)
 			return
 		}
 		c.Set(ctxKey, payload)
 		c.Next()
 	}
 }
+
+// parseLocale extracts the primary language code from Accept-Language header.
+// locale parsing now delegated to pkg/i18n

@@ -17,13 +17,13 @@ type UserResponse struct {
 type CreateUserRequest struct {
 	FirstName string `json:"first_name" binding:"required,min=1"`
 	LastName  string `json:"last_name" binding:"required,min=1"`
-	Email     string `json:"email" binding:"required,email"`
-	Password  string `json:"password" binding:"required,min=8"`
+	Email     string `json:"email" binding:"required,strict_email"`
+	Password  string `json:"password" binding:"required,strong_password"`
 	Role      string `json:"role" binding:"required"`
 }
 
 type LoginRequest struct {
-	Email    string `json:"email" binding:"required,email"`
+	Email    string `json:"email" binding:"required,strict_email"`
 	Password string `json:"password" binding:"required"`
 }
 
@@ -40,6 +40,6 @@ type RefreshResponse struct {
 }
 
 type ChangePasswordRequest struct {
-	CurrentPassword string `json:"current_password" binding:"required,min=8"`
-	NewPassword     string `json:"new_password" binding:"required,min=8"`
+	CurrentPassword string `json:"current_password" binding:"required"`
+	NewPassword     string `json:"new_password" binding:"required,strong_password"`
 }

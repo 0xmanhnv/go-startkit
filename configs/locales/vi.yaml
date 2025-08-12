@@ -1,0 +1,9 @@
+field_required: "trường %s là bắt buộc"
+min_len: "trường %s phải có ít nhất %s ký tự"
+email: "trường %s phải là email hợp lệ"
+strong_password: "trường %s cần mật khẩu mạnh (>=12, có chữ hoa/thường/số/ký tự đặc biệt, không khoảng trắng)"
+malformed_json_at: "JSON không hợp lệ tại vị trí %s"
+invalid_type_for_field: "sai kiểu dữ liệu cho trường %s"
+invalid_value_for_field: "giá trị không hợp lệ cho trường %s"
+empty_body: "nội dung yêu cầu trống"
+
