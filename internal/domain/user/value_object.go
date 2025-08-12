@@ -1,26 +1,27 @@
 package user
 
 import (
-    "strings"
+	appval "gostartkit/pkg/validator"
+	"strings"
 )
 
 // Email
 type Email string
 
 func (e Email) String() string {
-    return string(e)
+	return string(e)
 }
 
 func (e Email) IsValid() bool {
-    return strings.Contains(string(e), "@")
+	return appval.IsValidEmail(string(e))
 }
 
 func NewEmail(s string) (Email, error) {
-    email := Email(strings.TrimSpace(s))
-    if !email.IsValid() {
-        return "", ErrInvalidEmail
-    }
-    return email, nil
+	email := Email(strings.TrimSpace(s))
+	if !email.IsValid() {
+		return "", ErrInvalidEmail
+	}
+	return email, nil
 }
 
 // Password
@@ -40,16 +41,16 @@ func (p Password) String() string {
 type Role string
 
 const (
-    RoleAdmin  Role = "admin"
-    RoleUser   Role = "user"
-    RoleViewer Role = "viewer"
+	RoleAdmin  Role = "admin"
+	RoleUser   Role = "user"
+	RoleViewer Role = "viewer"
 )
 
 func (r Role) IsValid() bool {
-    switch r {
-    case RoleAdmin, RoleUser, RoleViewer:
-        return true
-    default:
-        return false
-    }
+	switch r {
+	case RoleAdmin, RoleUser, RoleViewer:
+		return true
+	default:
+		return false
+	}
 }

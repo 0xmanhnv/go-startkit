@@ -1,8 +1,9 @@
 package middleware
 
 import (
-	"net/http"
 	"strings"
+
+	resp "gostartkit/internal/interfaces/http/response"
 
 	"github.com/gin-gonic/gin"
 )
@@ -21,21 +22,21 @@ func JWTAuth(validator TokenValidator) gin.HandlerFunc {
 		authHeader := strings.TrimSpace(c.GetHeader("Authorization"))
 		if authHeader == "" {
 			c.Header("WWW-Authenticate", `Bearer realm="api", error="invalid_request", error_description="missing Authorization header"`)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid token"})
+			resp.Unauthorized(c, resp.CodeUnauthorized, "missing or invalid token")
 			return
 		}
 
 		tokenStr := extractBearerToken(authHeader)
 		if tokenStr == "" {
 			c.Header("WWW-Authenticate", `Bearer realm="api", error="invalid_request", error_description="expected Bearer token"`)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "missing or invalid token"})
+			resp.Unauthorized(c, resp.CodeUnauthorized, "missing or invalid token")
 			return
 		}
 
 		subject, role, err := validator(tokenStr)
 		if err != nil {
 			c.Header("WWW-Authenticate", `Bearer realm="api", error="invalid_token", error_description="token invalid or expired"`)
-			c.AbortWithStatusJSON(http.StatusUnauthorized, gin.H{"error": "invalid token"})
+			resp.Unauthorized(c, resp.CodeUnauthorized, "invalid token")
 			return
 		}
 

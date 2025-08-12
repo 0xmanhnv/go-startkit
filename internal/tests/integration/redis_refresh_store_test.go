@@ -39,6 +39,25 @@ func TestRedisRefreshStore_IssueValidateRevoke(t *testing.T) {
 	}
 }
 
+func TestRedisRefreshStore_InvalidTokenBehaviors(t *testing.T) {
+	ctx := context.Background()
+	addr := getenvOr("REDIS_ADDR", "localhost:6379")
+	pass := getenvOr("REDIS_PASSWORD", "")
+	db := 0
+
+	store := auth.NewRedisRefreshStore(addr, pass, db)
+
+	// Validate on unknown token should return domain-level invalid refresh error
+	if _, err := store.Validate(ctx, "nonexistent-token"); err == nil {
+		t.Fatalf("expected error for unknown token")
+	}
+
+	// Revoke on unknown token should return domain-level invalid refresh error
+	if err := store.Revoke(ctx, "nonexistent-token"); err == nil {
+		t.Fatalf("expected error on revoke of unknown token")
+	}
+}
+
 func getenvOr(k, def string) string {
 	if v := os.Getenv(k); v != "" {
 		return v

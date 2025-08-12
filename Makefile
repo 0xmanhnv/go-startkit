@@ -36,7 +36,7 @@ lint:
 
 tools:
 	@echo "Installing dev tools..."
-	@go install github.com/cosmtrek/air@latest
+	@go install github.com/air-verse/air@latest
 	@curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/master/install.sh | sh -s -- -b $(shell go env GOPATH)/bin v1.61.0
 	@go install github.com/sqlc-dev/sqlc/cmd/sqlc@latest
 

@@ -4,6 +4,7 @@ import (
 	"gostartkit/internal/application/dto"
 	"gostartkit/internal/application/usecase/userusecase"
 	domuser "gostartkit/internal/domain/user"
+	"gostartkit/internal/interfaces/http/middleware"
 	"gostartkit/internal/interfaces/http/response"
 	"gostartkit/internal/interfaces/http/validation"
 
@@ -60,7 +61,7 @@ func (h *UserHandler) Refresh(c *gin.Context) {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		code, msg := validation.MapBindJSONError(err)
+		code, msg := validation.MapBindJSONErrorWithLocale(middleware.GetLocale(c), err)
 		response.BadRequest(c, code, msg)
 		return
 	}
@@ -90,7 +91,7 @@ func (h *UserHandler) Logout(c *gin.Context) {
 		RefreshToken string `json:"refresh_token" binding:"required"`
 	}
 	if err := c.ShouldBindJSON(&body); err != nil {
-		code, msg := validation.MapBindJSONError(err)
+		code, msg := validation.MapBindJSONErrorWithLocale(middleware.GetLocale(c), err)
 		response.BadRequest(c, code, msg)
 		return
 	}

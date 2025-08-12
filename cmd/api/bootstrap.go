@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"os"
 	"time"
 
 	"gostartkit/internal/application/usecase/userusecase"
@@ -15,6 +16,7 @@ import (
 	"gostartkit/internal/interfaces/http/apidocs"
 	"gostartkit/internal/interfaces/http/handler"
 	"gostartkit/internal/interfaces/http/middleware"
+	"gostartkit/pkg/i18n"
 	"gostartkit/pkg/logger"
 	"gostartkit/pkg/rbac"
 
@@ -51,7 +53,21 @@ func initJWTService(cfg *config.Config) security.JWTService {
 	}); ok {
 		js.SetMeta(cfg.JWT.Issuer, cfg.JWT.Audience, cfg.JWT.LeewaySec)
 	}
+	if ac, ok := jwtSvc.(interface {
+		ConfigureAlgorithm(alg, kid, privateKeyPath, privateKeyPEM, publicKeysDir string) error
+	}); ok {
+		_ = ac.ConfigureAlgorithm(cfg.JWT.Alg, cfg.JWT.KID, cfg.JWT.PrivateKeyPath, cfg.JWT.PrivateKeyPEM, cfg.JWT.PublicKeysDir)
+	}
 	return jwtSvc
+}
+
+// initI18n loads locale catalogs from disk and sets default locale.
+func initI18n(cfg *config.Config) {
+	// Prefer external YAML catalogs; clear built-ins if directory exists
+	if _, err := os.Stat(cfg.I18nLocalesDir); err == nil {
+		i18n.Clear()
+	}
+	_ = i18n.Init(cfg.I18nLocalesDir, cfg.I18nDefaultLocale)
 }
 
 // buildUserComponents constructs repository, hasher, aggregated usecases and returns the HTTP handler.
@@ -94,7 +110,7 @@ func buildRouter(cfg *config.Config, userHandler *handler.UserHandler, jwtSvc se
 	httpiface.AddReadiness(router, ping)
 	// Optional: swap in Redis-based rate limiter for login when Redis configured
 	if cfg.RedisAddr != "" {
-		rl := ratelimit.NewRedisLimiter(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB)
+		rl := ratelimit.NewRedisLimiter(cfg.RedisAddr, cfg.RedisPassword, cfg.RedisDB).WithFailClosed(cfg.HTTP.LoginRateLimitFailClosed)
 		// Override login route with Redis limiter by re-registering the handler (simple approach)
 		// Note: our router builder already registers routes; to keep it non-invasive we can add a group-level middleware
 		// For clarity in this starter, we attach a global middleware that only triggers on /v1/auth/login

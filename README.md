@@ -55,6 +55,12 @@ Handler returns HTTP Response
    - `JWT_AUDIENCE=app-clients` (default)
    - `JWT_LEEWAY_SEC=30`
   - Optional HTTP security & rate limit:
+    - `HTTP_LOGIN_RATELIMIT_RPS=1`
+    - `HTTP_LOGIN_RATELIMIT_BURST=5`
+    - `HTTP_LOGIN_RATELIMIT_FAIL_CLOSED=false` (set `true` to deny on Redis errors)
+  - i18n (validation messages):
+    - `I18N_LOCALES_DIR=configs/locales`
+    - `I18N_DEFAULT_LOCALE=en`
    - `HTTP_SECURITY_HEADERS=true` (enable common security headers; use behind TLS)
    - `HTTP_LOGIN_RATELIMIT_RPS=1`
    - `HTTP_LOGIN_RATELIMIT_BURST=5`
@@ -74,7 +80,7 @@ Handler returns HTTP Response
    - `docker compose -f docker-compose.dev.yml up`
    - Source code is bind-mounted; the app rebuilds automatically on changes.
 2) Local (Go and Air installed):
-   - Install Air: `go install github.com/cosmtrek/air@latest`
+   - Install Air: `go install github.com/air-verse/air@latest`
    - Run: `air -c ./.air.toml`
 
 ### DevEx shortcuts
@@ -88,10 +94,6 @@ Handler returns HTTP Response
 Default API base URL: `http://localhost:8080`
 
 ## Testing
-
-[![Go version](https://img.shields.io/badge/go-1.24+-blue)](https://go.dev)
-[![Build](https://img.shields.io/badge/build-passing-brightgreen)](#)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 ### Unit tests
 - Run all unit tests:
@@ -370,10 +372,11 @@ cmd/api          → all (composition root only)
 
 ## Documentation
 - Codebase review & pending fixes: `docs/review.md`
-- Best-practice starter checklist: `docs/starter-kit-checklist.md`
-  - Step-by-step roadmap: `docs/step-by-step.md`
-  - RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
-  - Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
+- Best practices (security & ops): `docs/best-practices.md`
+- Validation layers overview: `docs/validation-architecture.md`
+- Internationalization: `docs/i18n.md`
+- RBAC policy file example: `configs/rbac.policy.yaml` (configure via `RBAC_POLICY_PATH`)
+- Authorization usage: include header `Authorization: Bearer <JWT>` for protected routes
 
 ## Rename project/module & keeping up-to-date
 If you start a new project from this starter kit, or want to pull updates later, use the script below.
