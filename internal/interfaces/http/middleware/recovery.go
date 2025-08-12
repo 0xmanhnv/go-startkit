@@ -13,6 +13,12 @@ func JSONRecovery() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		defer func() {
 			if r := recover(); r != nil {
+				// If response already started (e.g., a 400 was sent), don't attempt to override with 500
+				if c.Writer.Written() {
+					// Best-effort: just abort the context to stop further handlers
+					c.Abort()
+					return
+				}
 				// Best effort: do not expose internal panic details to client
 				// Attach request id if available (already added by RequestID middleware)
 				reqID := c.Writer.Header().Get(RequestIDHeader)

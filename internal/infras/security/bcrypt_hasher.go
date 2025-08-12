@@ -10,13 +10,16 @@ type BcryptHasher struct{ cost int }
 // bcrypt.DefaultCost is used.
 func NewBcryptHasher(cost int) *BcryptHasher { return &BcryptHasher{cost: cost} }
 
-func (b *BcryptHasher) Hash(raw string) string {
+func (b *BcryptHasher) Hash(raw string) (string, error) {
 	cost := b.cost
 	if cost <= 0 {
 		cost = bcrypt.DefaultCost
 	}
-	hashed, _ := bcrypt.GenerateFromPassword([]byte(raw), cost)
-	return string(hashed)
+	hashed, err := bcrypt.GenerateFromPassword([]byte(raw), cost)
+	if err != nil {
+		return "", err
+	}
+	return string(hashed), nil
 }
 
 func (b *BcryptHasher) Compare(hashed string, raw string) bool {

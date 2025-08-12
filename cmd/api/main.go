@@ -18,6 +18,9 @@ func main() {
 	// Initialize global logger once; other packages can use slog.Default()/logger.L()
 	logger.Init(logger.Options{Level: cfg.LogLevel, Format: "json", AddSource: cfg.Env != "prod"})
 
+	// Load i18n catalogs
+	initI18n(cfg)
+
 	// DB + migrations
 	pool, err := initPostgresAndMigrate(cfg)
 	if err != nil {

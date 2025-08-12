@@ -25,7 +25,10 @@ func (uc *CreateUserUseCase) Execute(ctx context.Context, input dto.CreateUserRe
 	if role == user.RoleAdmin {
 		return nil, user.ErrInvalidRole
 	}
-	hashed := uc.hasher.Hash(input.Password)
+	hashed, err := uc.hasher.Hash(input.Password)
+	if err != nil {
+		return nil, err
+	}
 	newUser := user.NewUser(input.FirstName, input.LastName, emailVO, hashed, role)
 	if err := user.ValidateUser(newUser); err != nil {
 		return nil, err
